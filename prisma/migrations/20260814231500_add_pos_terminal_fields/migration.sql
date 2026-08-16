@@ -1,0 +1,5 @@
+ALTER TABLE "Order" ADD COLUMN "customerEmail" TEXT;
+ALTER TABLE "OrderItem" ADD COLUMN "addons" JSONB;
+ALTER TABLE "Bill" ADD COLUMN "customerEmail" TEXT;
+ALTER TABLE "Bill" ADD COLUMN "notePrintEnabled" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "BillItem" ADD COLUMN "addons" JSONB;

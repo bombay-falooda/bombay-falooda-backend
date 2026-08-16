@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2022",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "noImplicitAny": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@app/common": ["./libs/common/src"],
+      "@app/common/*": ["./libs/common/src/*"],
+      "@app/config": ["./libs/config/src"],
+      "@app/config/*": ["./libs/config/src/*"],
+      "@app/database": ["./libs/database/src"],
+      "@app/database/*": ["./libs/database/src/*"],
+      "@app/auth": ["./libs/auth/src"],
+      "@app/auth/*": ["./libs/auth/src/*"],
+      "@app/permissions": ["./libs/permissions/src"],
+      "@app/permissions/*": ["./libs/permissions/src/*"],
+      "@app/notifications": ["./libs/notifications/src"],
+      "@app/notifications/*": ["./libs/notifications/src/*"],
+      "@app/whatsapp": ["./libs/whatsapp/src"],
+      "@app/whatsapp/*": ["./libs/whatsapp/src/*"],
+      "@app/audit": ["./libs/audit/src"],
+      "@app/audit/*": ["./libs/audit/src/*"],
+      "@modules/*": ["./modules/*"]
+    }
+  }
+}

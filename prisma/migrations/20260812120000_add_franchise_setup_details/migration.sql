@@ -1,0 +1,16 @@
+ALTER TABLE "Franchise"
+ADD COLUMN "address" TEXT,
+ADD COLUMN "city" TEXT,
+ADD COLUMN "state" TEXT,
+ADD COLUMN "pincode" TEXT,
+ADD COLUMN "agreementStartDate" TEXT,
+ADD COLUMN "agreementEndDate" TEXT,
+ADD COLUMN "gstNumber" TEXT,
+ADD COLUMN "securityDeposit" TEXT,
+ADD COLUMN "royaltyPercent" TEXT,
+ADD COLUMN "notes" TEXT,
+ADD COLUMN "canManageMenu" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN "canManageOutletStaff" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN "canViewReports" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN "canRouteOrders" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN "canRequestExtraPos" BOOLEAN NOT NULL DEFAULT true;

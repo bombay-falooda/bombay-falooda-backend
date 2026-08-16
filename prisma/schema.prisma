@@ -1,0 +1,537 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPERADMIN
+  FRANCHISE_OWNER
+  POS_USER
+  STAFF
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum OutletStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PosDeviceType {
+  PERMANENT
+  TEMPORARY
+}
+
+enum PosDeviceStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum OrderSource {
+  WEBSITE
+  POS
+  ZOMATO
+  SWIGGY
+  EZCATER
+  OTHER
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+  DELIVERY
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum BillStatus {
+  HELD
+  FINALIZED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  CARD
+  ONLINE
+  OTHER
+}
+
+enum OtpPurpose {
+  LOGIN_2FA
+  PHONE_LOGIN
+  PASSWORD_RESET
+}
+
+enum MenuSetupStatus {
+  NOT_STARTED
+  DRAFT
+  PUBLISHED
+  LOCKED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String?    @unique
+  phone        String?    @unique
+  passwordHash String
+  role         UserRole
+  status       UserStatus @default(ACTIVE)
+  franchiseId  String?
+  outletId     String?
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+  twoFactorMethod  String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  franchise Franchise? @relation(fields: [franchiseId], references: [id])
+  outlet    Outlet?    @relation(fields: [outletId], references: [id])
+  auditLogs AuditLog[]
+  authOtps   AuthOtp[]
+  sessions   UserSession[]
+  permissions UserPermission[]
+  cancelledBills Bill[] @relation("BillCancelledBy")
+
+  @@index([role])
+  @@index([status])
+}
+
+model Franchise {
+  id        String   @id @default(cuid())
+  name      String
+  ownerName String?
+  phone     String?
+  email     String?
+  address   String?
+  city      String?
+  state     String?
+  pincode   String?
+  agreementStartDate String?
+  agreementEndDate   String?
+  gstNumber String?
+  securityDeposit String?
+  royaltyPercent String?
+  notes     String?
+  canManageMenu Boolean @default(true)
+  canManageOutletStaff Boolean @default(true)
+  canViewReports Boolean @default(true)
+  canRouteOrders Boolean @default(true)
+  canRequestExtraPos Boolean @default(true)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users   User[]
+  outlets Outlet[]
+}
+
+model Outlet {
+  id          String       @id @default(cuid())
+  franchiseId String?
+  name        String
+  code        String       @unique
+  address     String
+  city        String?
+  state       String?
+  pincode     String?
+  phone       String?
+  email       String?
+  latitude    Decimal?
+  longitude   Decimal?
+  status      OutletStatus @default(ACTIVE)
+  dineIn      Boolean      @default(true)
+  takeaway    Boolean      @default(true)
+  delivery    Boolean      @default(false)
+  onlineOrderingEnabled Boolean @default(true)
+  serviceRadiusKm Decimal?
+  outletBaseCharge Decimal?
+  deliveryKmPricing Json?
+  openingTime String?
+  closingTime String?
+  menuSetupStatus MenuSetupStatus @default(NOT_STARTED)
+  menuEditingLocked Boolean @default(false)
+  menuEditingUnlockedUntil DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  franchise       Franchise?      @relation(fields: [franchiseId], references: [id])
+  users           User[]
+  permissions     UserPermission[]
+  posDevices      PosDevice[]
+  outletMenuItems OutletMenuItem[]
+  orderRoutes     OrderRoute[]
+  orders          Order[]
+  bills           Bill[]
+
+  @@index([franchiseId])
+  @@index([status])
+}
+
+model PosDevice {
+  id          String          @id @default(cuid())
+  outletId    String
+  name        String
+  type        PosDeviceType
+  status      PosDeviceStatus @default(PENDING)
+  accessKey   String          @unique
+  pinHash     String?
+  deviceCode  String?
+  eventName   String?
+  eventLocation String?
+  handlerName String?
+  handlerPhone String?
+  validFrom   DateTime?
+  validUntil  DateTime?
+  lastLoginAt DateTime?
+  lastLoginDeviceCode String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  outlet       Outlet           @relation(fields: [outletId], references: [id])
+  permissions  UserPermission[]
+  orderRoutes  OrderRoute[]
+  orders       Order[]
+  bills        Bill[]
+
+  @@index([outletId])
+  @@index([status])
+}
+
+model MenuCategory {
+  id        String   @id @default(cuid())
+  name      String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items MenuItem[]
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  categoryId  String
+  name        String
+  description String?
+  imageUrl    String?
+  basePrice   Decimal
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category        MenuCategory    @relation(fields: [categoryId], references: [id])
+  addonGroups     MenuAddonGroup[]
+  outletMenuItems OutletMenuItem[]
+  orderItems      OrderItem[]
+  billItems       BillItem[]
+
+  @@index([categoryId])
+}
+
+model MenuAddonGroup {
+  id        String   @id @default(cuid())
+  itemId    String
+  name      String
+  minSelect Int      @default(0)
+  maxSelect Int      @default(1)
+  isRequired Boolean @default(false)
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  item   MenuItem    @relation(fields: [itemId], references: [id])
+  addons MenuAddon[]
+
+  @@index([itemId])
+}
+
+model MenuAddon {
+  id        String   @id @default(cuid())
+  groupId   String
+  name      String
+  price     Decimal  @default(0)
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  group MenuAddonGroup @relation(fields: [groupId], references: [id])
+
+  @@index([groupId])
+}
+
+model OutletMenuItem {
+  id        String   @id @default(cuid())
+  outletId  String
+  itemId    String
+  price     Decimal
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  outlet Outlet   @relation(fields: [outletId], references: [id])
+  item   MenuItem @relation(fields: [itemId], references: [id])
+
+  @@unique([outletId, itemId])
+  @@index([outletId])
+}
+
+model OrderRoute {
+  id          String      @id @default(cuid())
+  outletId    String
+  source      OrderSource
+  posDeviceId String
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  outlet    Outlet    @relation(fields: [outletId], references: [id])
+  posDevice PosDevice @relation(fields: [posDeviceId], references: [id])
+
+  @@unique([outletId, source])
+  @@index([posDeviceId])
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  outletId    String
+  posDeviceId String?
+  source      OrderSource
+  type        OrderType
+  status      OrderStatus @default(PENDING)
+  customerName  String?
+  customerPhone String?
+  customerEmail String?
+  notes       String?
+  subtotal    Decimal
+  taxAmount   Decimal     @default(0)
+  discount    Decimal     @default(0)
+  total       Decimal
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  outlet    Outlet     @relation(fields: [outletId], references: [id])
+  posDevice PosDevice? @relation(fields: [posDeviceId], references: [id])
+  items     OrderItem[]
+  bill      Bill?
+
+  @@index([outletId])
+  @@index([posDeviceId])
+  @@index([source])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  itemId    String
+  name      String
+  quantity  Int
+  unitPrice Decimal
+  total     Decimal
+  addons    Json?
+  notes     String?
+
+  order Order    @relation(fields: [orderId], references: [id])
+  item  MenuItem @relation(fields: [itemId], references: [id])
+
+  @@index([orderId])
+}
+
+model Bill {
+  id          String     @id @default(cuid())
+  outletId    String
+  posDeviceId String
+  orderId     String?    @unique
+  billNumber  String     @unique
+  status      BillStatus @default(HELD)
+  customerName  String?
+  customerPhone String?
+  customerEmail String?
+  notes       String?
+  notePrintEnabled Boolean @default(true)
+  subtotal    Decimal
+  taxAmount   Decimal    @default(0)
+  discount    Decimal    @default(0)
+  total       Decimal
+  finalizedAt DateTime?
+  cancelledAt DateTime?
+  cancelledById String?
+  cancelReason String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  outlet    Outlet      @relation(fields: [outletId], references: [id])
+  posDevice PosDevice   @relation(fields: [posDeviceId], references: [id])
+  order     Order?      @relation(fields: [orderId], references: [id])
+  cancelledBy User?     @relation("BillCancelledBy", fields: [cancelledById], references: [id])
+  items     BillItem[]
+  kotTickets KotTicket[]
+  payments  Payment[]
+
+  @@index([outletId])
+  @@index([posDeviceId])
+  @@index([cancelledById])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model BillItem {
+  id        String  @id @default(cuid())
+  billId    String
+  itemId    String
+  name      String
+  quantity  Int
+  unitPrice Decimal
+  total     Decimal
+  addons    Json?
+  notes     String?
+
+  bill Bill     @relation(fields: [billId], references: [id])
+  item MenuItem @relation(fields: [itemId], references: [id])
+  kotItems KotTicketItem[]
+
+  @@index([billId])
+}
+
+model KotTicket {
+  id        String   @id @default(cuid())
+  billId    String
+  kotNumber String
+  notes     String?
+  printedAt DateTime?
+  createdAt DateTime @default(now())
+
+  bill Bill @relation(fields: [billId], references: [id])
+  items KotTicketItem[]
+
+  @@index([billId])
+}
+
+model KotTicketItem {
+  id          String @id @default(cuid())
+  kotTicketId String
+  billItemId  String
+  quantity    Int
+  notes       String?
+
+  kotTicket KotTicket @relation(fields: [kotTicketId], references: [id])
+  billItem  BillItem  @relation(fields: [billItemId], references: [id])
+
+  @@unique([kotTicketId, billItemId])
+  @@index([billItemId])
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  billId    String
+  method    PaymentMethod
+  amount    Decimal
+  reference String?
+  createdAt DateTime      @default(now())
+
+  bill Bill @relation(fields: [billId], references: [id])
+
+  @@index([billId])
+  @@index([method])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+model AuthOtp {
+  id         String     @id @default(cuid())
+  userId     String
+  codeHash   String
+  purpose    OtpPurpose
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int        @default(0)
+  createdAt  DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([purpose])
+  @@index([expiresAt])
+}
+
+model UserSession {
+  id               String   @id @default(cuid())
+  userId           String
+  refreshTokenHash String
+  deviceName       String?
+  ipAddress        String?
+  userAgent        String?
+  revokedAt        DateTime?
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([revokedAt])
+  @@index([expiresAt])
+}
+
+model UserPermission {
+  id               String   @id @default(cuid())
+  userId           String
+  outletId         String?
+  posDeviceId      String?
+  canEditMenu      Boolean  @default(false)
+  canEditBill      Boolean  @default(false)
+  canCancelBill    Boolean  @default(false)
+  canApplyDiscount Boolean  @default(false)
+  canReprintBill   Boolean  @default(false)
+  canViewReports   Boolean  @default(false)
+  canRouteOrders   Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id])
+  outlet    Outlet?    @relation(fields: [outletId], references: [id])
+  posDevice PosDevice? @relation(fields: [posDeviceId], references: [id])
+
+  @@index([userId])
+  @@index([outletId])
+  @@index([posDeviceId])
+}
