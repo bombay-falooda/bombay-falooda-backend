@@ -5,7 +5,7 @@
   "description": "Bombay Falooda restaurant management platform backend.",
   "scripts": {
     "build": "prisma generate && nest build api && nest build worker",
-    "start": "nest start api",
+    "start": "node dist/apps/api/main.js",
     "start:dev": "nest start api --watch",
     "start:worker": "nest start worker",
     "start:worker:dev": "nest start worker --watch",
