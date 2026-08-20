@@ -15,3 +15,5 @@ npm run start:dev
 ```
 
 Copy `.env.example` to `.env` before running locally.
+
+<!-- Render Auto-Deploy Trigger -->
