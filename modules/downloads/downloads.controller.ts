@@ -19,6 +19,14 @@ export class DownloadsController {
 
     const filePath = path.join(process.cwd(), 'public', 'downloads', targetName);
 
+    const zipPath = path.join(process.cwd(), 'public', 'downloads', 'Bombay-Falooda-POS-Setup-v1.0.0.zip');
+
+    if (fs.existsSync(zipPath)) {
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="Bombay-Falooda-POS-Setup-v1.0.0.zip"`);
+      return res.sendFile(zipPath);
+    }
+
     if (fs.existsSync(filePath)) {
       return res.download(filePath, targetName);
     }
@@ -31,4 +39,5 @@ export class DownloadsController {
     res.send(exeHeader);
   }
 }
+
 
