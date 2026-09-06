@@ -26,4 +26,9 @@ export class NotificationsController {
   ) {
     return this.notificationsService.markAllAsRead(role, outletId);
   }
+
+  @Get('test-firebase')
+  testFirebase() {
+    return this.notificationsService.getFirebaseStatus();
+  }
 }

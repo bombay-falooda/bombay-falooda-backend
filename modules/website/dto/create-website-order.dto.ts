@@ -80,6 +80,22 @@ export class CreateWebsiteOrderDto {
   @IsOptional()
   notes?: string;
 
+  @IsString()
+  @IsOptional()
+  razorpayPaymentId?: string;
+
+  @IsString()
+  @IsOptional()
+  razorpayOrderId?: string;
+
+  @IsString()
+  @IsOptional()
+  paymentMethod?: string;
+
+  @IsString()
+  @IsOptional()
+  paymentStatus?: string;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => WebsiteOrderItemDto)

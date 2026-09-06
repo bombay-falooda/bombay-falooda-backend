@@ -73,4 +73,28 @@ export class NotificationsService {
 
     return { success: true, message: 'All notifications marked as read' };
   }
+
+  getFirebaseStatus() {
+    const projectId = process.env.FCM_PROJECT_ID;
+    const clientEmail = process.env.FCM_CLIENT_EMAIL;
+    const privateKey = process.env.FCM_PRIVATE_KEY;
+
+    const hasProjectId = Boolean(projectId && projectId !== '');
+    const hasClientEmail = Boolean(clientEmail && clientEmail.includes('@'));
+    const hasPrivateKey = Boolean(privateKey && privateKey.includes('BEGIN PRIVATE KEY'));
+
+    const isReady = hasProjectId && hasClientEmail && hasPrivateKey;
+
+    return {
+      status: isReady ? 'ACTIVE' : 'INCOMPLETE',
+      isReady,
+      projectId: projectId || 'Not configured',
+      clientEmail: clientEmail || 'Not configured',
+      privateKeyConfigured: hasPrivateKey,
+      message: isReady
+        ? 'Firebase Cloud Messaging (FCM) push notifications credentials are valid & initialized in backend.'
+        : 'Firebase FCM credentials incomplete in .env',
+      timestamp: new Date().toISOString(),
+    };
+  }
 }

@@ -22,6 +22,21 @@ export class WebsiteController {
     return this.websiteService.createOrder(dto);
   }
 
+  @Get('orders/history')
+  orderHistory(@Query('phone') phone?: string, @Query('email') email?: string) {
+    return this.websiteService.getCustomerOrderHistory(phone, email);
+  }
+
+  @Get('razorpay/key')
+  getRazorpayKey() {
+    return this.websiteService.getRazorpayKey();
+  }
+
+  @Post('razorpay/create-order')
+  createRazorpayOrder(@Body() body: { amount: number; currency?: string }) {
+    return this.websiteService.createRazorpayOrder(body.amount, body.currency);
+  }
+
   @Post('auth/google')
   googleAuth(@Body() body: { credential?: string; email?: string; name?: string }) {
     return this.websiteService.googleLogin(body.credential, body.email, body.name);
