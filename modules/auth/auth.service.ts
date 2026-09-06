@@ -93,6 +93,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid phone number');
     }
 
+    if (this.hasAuthenticatorEnabled(user)) {
+      return this.createAuthenticatorChallenge(user);
+    }
+
     const otp = randomInt(100000, 999999).toString();
     const codeHash = await bcrypt.hash(otp, this.passwordSaltRounds);
     const authOtp = await this.prisma.authOtp.create({
@@ -251,6 +255,19 @@ export class AuthService {
     });
 
     return { success: true };
+  }
+
+  async disableAuthenticator(userId: string) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        twoFactorEnabled: false,
+        twoFactorSecret: null,
+        twoFactorMethod: null,
+      },
+    });
+
+    return { success: true, message: 'Two-factor authentication disabled' };
   }
 
   async refresh(dto: RefreshTokenDto) {

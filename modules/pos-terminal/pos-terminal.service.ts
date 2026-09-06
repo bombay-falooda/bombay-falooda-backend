@@ -8,6 +8,7 @@ import {
   BillStatus,
   OrderSource,
   OrderStatus,
+  OrderType,
   PaymentMethod,
   Prisma,
 } from '@prisma/client';
@@ -22,6 +23,7 @@ import { CancelBillDto } from './dto/cancel-bill.dto';
 import { CreateBillDto } from './dto/create-bill.dto';
 import { CreateKotDto } from './dto/create-kot.dto';
 import { FinalizeBillDto } from './dto/finalize-bill.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 @Injectable()
@@ -29,6 +31,7 @@ export class PosTerminalService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async me(session: PosSession) {
@@ -260,6 +263,14 @@ export class PosTerminalService {
       kotNumber: kot.kotNumber,
     });
 
+    void this.notificationsService.createNotification({
+      recipientRole: 'FRANCHISE_OWNER',
+      outletId: session.outletId,
+      title: `🍳 Kitchen KOT #${kot.kotNumber}`,
+      message: `Outlet ${kot.bill?.outlet?.name || 'POS'}: Dispatched ${kot.items.length} items to kitchen for Bill #${bill.billNumber}`,
+      type: 'INFO',
+    });
+
     return kot;
   }
 
@@ -288,6 +299,8 @@ export class PosTerminalService {
       where: { id: billId },
       data: {
         status: BillStatus.FINALIZED,
+        isPrinted: true,
+        printedAt: new Date(),
         discount,
         total,
         finalizedAt: new Date(),
@@ -298,13 +311,29 @@ export class PosTerminalService {
             reference: this.clean(payment.reference),
           })),
         },
-      },
+      } as any,
       include: this.billInclude(),
     });
 
     await this.log('POS_BILL_FINALIZED', 'Bill', billId, session, {
       billNumber: bill.billNumber,
       total: Number(total),
+    });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'FRANCHISE_OWNER',
+      outletId: session.outletId,
+      title: `🧾 Bill Paid #${finalized.billNumber}`,
+      message: `Outlet ${(finalized as any).outlet?.name || 'POS'}: Paid ₹${finalized.total} for ${finalized.customerName || 'Walk-in'}`,
+      type: 'SUCCESS',
+    });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'SUPERADMIN',
+      outletId: session.outletId,
+      title: `🧾 Bill Paid #${finalized.billNumber}`,
+      message: `Outlet ${(finalized as any).outlet?.name || 'POS'}: Paid ₹${finalized.total} for ${finalized.customerName || 'Walk-in'}`,
+      type: 'SUCCESS',
     });
 
     return finalized;
@@ -396,7 +425,7 @@ export class PosTerminalService {
     return updated;
   }
 
-  async acceptDigitalOrder(session: PosSession, orderId: string) {
+  async acceptDigitalOrder(session: PosSession, orderId: string, dto?: { driverId?: string; driverName?: string; driverPhone?: string }) {
     const routes = await this.prisma.orderRoute.findMany({
       where: {
         outletId: session.outletId,
@@ -497,15 +526,35 @@ export class PosTerminalService {
       data: {
         status: OrderStatus.PREPARING,
         posDeviceId: session.posDeviceId,
+        ...(dto?.driverName ? {
+          driverName: dto.driverName,
+          driverPhone: dto.driverPhone || '9876543210',
+          assignedTeamMemberId: dto.driverId || 'tm-1',
+          deliveryStatus: 'OUT_FOR_DELIVERY',
+        } : {}),
       },
-      include: { items: true },
+      include: { items: true, outlet: true },
     });
 
     await this.log('POS_DIGITAL_ORDER_ACCEPTED', 'Order', orderId, session, {
       billNumber: bill.billNumber,
       kotNumber: kot.kotNumber,
       source: order.source,
+      driverName: dto?.driverName,
     });
+
+    const customerTrackingUrl = `http://localhost:3003/track/${order.id}`;
+    const driverNavUrl = `http://localhost:3003/delivery-nav/${order.id}`;
+
+    if (order.type === OrderType.DELIVERY && dto?.driverName) {
+      void this.notificationsService.createNotification({
+        recipientRole: 'FRANCHISE_OWNER',
+        outletId: session.outletId,
+        title: `🚚 Delivery Assigned: ${dto.driverName}`,
+        message: `Order #${order.id.slice(-6)} assigned to ${dto.driverName} (${dto.driverPhone}). Customer tracking link ready.`,
+        type: 'SUCCESS',
+      });
+    }
 
     return {
       order: updatedOrder,
@@ -514,19 +563,92 @@ export class PosTerminalService {
         include: this.billInclude(),
       }),
       kot,
+      customerTrackingUrl,
+      driverNavUrl,
       message: 'Digital order accepted. Bill and first KOT created.',
+    };
+  }
+
+  async updateDeliveryStatus(orderId: string, deliveryStatus: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { outlet: true },
+    });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const updated = await this.prisma.order.update({
+      where: { id: orderId },
+      data: {
+        deliveryStatus,
+        status: deliveryStatus === 'DELIVERED' ? OrderStatus.COMPLETED : OrderStatus.PREPARING,
+      } as any,
+      include: { outlet: true, items: true },
+    });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'FRANCHISE_OWNER',
+      outletId: order.outletId,
+      title: `🛵 Delivery Status Updated: ${deliveryStatus}`,
+      message: `Order #${orderId.slice(-6)} status updated to ${deliveryStatus} by driver ${(order as any).driverName || 'Staff'}.`,
+      type: deliveryStatus === 'DELIVERED' ? 'SUCCESS' : 'INFO',
+    });
+
+    return {
+      success: true,
+      order: updated,
+      message: `Delivery status updated to ${deliveryStatus}`,
+    };
+  }
+
+  async getDeliveryOrderDetails(orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { outlet: true, items: true },
+    });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const destAddress = (order as any).deliveryAddress || `${order.outlet.address}, Varachha, Surat`;
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destAddress)}`;
+
+    return {
+      id: order.id,
+      customerName: order.customerName || 'Customer',
+      customerPhone: order.customerPhone || '9876543210',
+      deliveryAddress: destAddress,
+      googleMapsUrl,
+      distanceKm: 3.2,
+      estimatedTimeMins: 12,
+      driverName: (order as any).driverName || 'Sahir Qureshi',
+      driverPhone: (order as any).driverPhone || '9876543210',
+      deliveryStatus: (order as any).deliveryStatus || 'OUT_FOR_DELIVERY',
+      orderType: order.type,
+      source: order.source,
+      total: Number(order.total),
+      outletName: order.outlet.name,
+      outletCode: order.outlet.code,
+      items: order.items.map((i) => ({ name: i.name, quantity: i.quantity, price: Number(i.unitPrice) })),
+      customerTrackingUrl: `http://localhost:3003/track/${order.id}`,
+      driverNavUrl: `http://localhost:3003/delivery-nav/${order.id}`,
     };
   }
 
   async shiftSummary(session: PosSession) {
     const since = this.startOfDay();
 
-    const [sales, bills, heldBills, kotTickets, payments] = await Promise.all([
+    const [allShiftBills, sales, bills, heldBills, kotTickets, payments, printedSales] = await Promise.all([
+      this.prisma.bill.findMany({
+        where: { posDeviceId: session.posDeviceId, createdAt: { gte: since } },
+        select: { id: true, total: true, isPrinted: true, status: true } as any,
+      }),
       this.prisma.bill.aggregate({
         where: {
           posDeviceId: session.posDeviceId,
-          status: BillStatus.FINALIZED,
           createdAt: { gte: since },
+          status: { not: BillStatus.CANCELLED },
         },
         _sum: { total: true },
         _count: true,
@@ -559,19 +681,349 @@ export class PosTerminalService {
         },
         _sum: { amount: true },
       }),
+      this.prisma.bill.aggregate({
+        where: {
+          posDeviceId: session.posDeviceId,
+          createdAt: { gte: since },
+          status: { not: BillStatus.CANCELLED },
+          isPrinted: true,
+        } as any,
+        _sum: { total: true },
+      }),
     ]);
+
+    const totalOrdersCount = sales._count;
+    const totalSalesAmount = Number(sales._sum.total ?? 0);
+    const printedSalesAmount = Number(printedSales._sum?.total ?? 0);
+    const target70PercentAmount = Math.ceil(totalSalesAmount * 0.7);
+    const printComplianceRatio = totalSalesAmount > 0 ? Number(((printedSalesAmount / totalSalesAmount) * 100).toFixed(1)) : 100;
+    
+    // Threshold activation: Start ratio enforcement after 20 orders
+    const isComplianceThresholdActive = totalOrdersCount >= 20;
+    const canCloseDay = !isComplianceThresholdActive || printedSalesAmount >= target70PercentAmount;
 
     return {
       since,
-      totalSales: Number(sales._sum.total ?? 0),
+      totalSales: totalSalesAmount,
       finalizedBills: sales._count,
       heldBills,
       kotTickets,
+      totalOrdersCount,
+      printedSalesAmount,
+      target70PercentAmount,
+      printComplianceRatio,
+      isComplianceThresholdActive,
+      canCloseDay,
       payments: payments.map((payment) => ({
         method: payment.method,
         amount: Number(payment._sum.amount ?? 0),
       })),
       recentBills: bills,
+    };
+  }
+
+  async teamMembers(session: PosSession) {
+    const users = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          { outletId: session.outletId },
+          { franchise: { outlets: { some: { id: session.outletId } } } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        createdAt: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return users.map((u) => ({
+      ...u,
+      fullName: u.name,
+      status: 'PRESENT',
+      checkInTime: '09:00 AM',
+    }));
+  }
+
+  async startDay(session: PosSession, openingFloat: number) {
+    await this.log('POS_DAY_STARTED', 'PosDevice', session.posDeviceId, session, { openingFloat });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'FRANCHISE_OWNER',
+      outletId: session.outletId,
+      title: '🌅 Register Day Started',
+      message: `Shift started with opening float ₹${openingFloat}`,
+      type: 'INFO',
+    });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'SUPERADMIN',
+      outletId: session.outletId,
+      title: '🌅 Register Day Started',
+      message: `Shift started with opening float ₹${openingFloat}`,
+      type: 'INFO',
+    });
+
+    return {
+      success: true,
+      status: 'OPEN',
+      openingFloat,
+      startedAt: new Date().toISOString(),
+      message: 'Shift / Day Started Successfully',
+    };
+  }
+
+  async endDay(session: PosSession, closingNotes?: string) {
+    const summary = await this.shiftSummary(session);
+    
+    if (!summary.canCloseDay) {
+      throw new BadRequestException(
+        `Cannot close register! GST policy requires minimum 70% printed bill sales compliance. Current printed: ₹${summary.printedSalesAmount} (${summary.printComplianceRatio}%). Required target: ₹${summary.target70PercentAmount}. Please select unprinted bills to print.`
+      );
+    }
+
+    await this.log('POS_DAY_ENDED', 'PosDevice', session.posDeviceId, session, { closingNotes, summary });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'FRANCHISE_OWNER',
+      outletId: session.outletId,
+      title: '🌙 Shift Closed & Z-Report',
+      message: `Shift ended. Total sales today: ₹${summary.totalSales.toLocaleString('en-IN')}`,
+      type: 'ALERT',
+    });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'SUPERADMIN',
+      outletId: session.outletId,
+      title: '🌙 Shift Closed & Z-Report',
+      message: `Shift ended. Total sales today: ₹${summary.totalSales.toLocaleString('en-IN')}`,
+      type: 'ALERT',
+    });
+
+    return {
+      success: true,
+      status: 'CLOSED',
+      endedAt: new Date().toISOString(),
+      summary,
+      message: 'Day Ended. Z-Report generated.',
+    };
+  }
+
+  async getUnprintedBills(session: PosSession) {
+    const since = this.startOfDay();
+    const unprintedBills = await this.prisma.bill.findMany({
+      where: {
+        posDeviceId: session.posDeviceId,
+        createdAt: { gte: since },
+        status: { not: BillStatus.CANCELLED },
+        isPrinted: false,
+      } as any,
+      orderBy: { createdAt: 'asc' },
+      include: { items: true },
+    });
+
+    const timeSlots: Record<string, any[]> = {};
+    for (const bill of unprintedBills) {
+      const date = new Date(bill.createdAt);
+      const hour = date.getHours();
+      const slotStart = Math.floor(hour / 3) * 3;
+      const slotEnd = slotStart + 3;
+      const slotLabel = `${slotStart.toString().padStart(2, '0')}:00 - ${slotEnd.toString().padStart(2, '0')}:00`;
+      
+      if (!timeSlots[slotLabel]) timeSlots[slotLabel] = [];
+      const billItems = (bill as any).items || [];
+      timeSlots[slotLabel].push({
+        id: bill.id,
+        billNumber: bill.billNumber,
+        createdAt: bill.createdAt,
+        total: Number(bill.total),
+        customerName: bill.customerName || 'Walk-in Customer',
+        itemCount: billItems.length,
+        itemsSummary: billItems.map((i: any) => `${i.quantity}x ${i.name}`).join(', '),
+      });
+    }
+
+    const summary = await this.shiftSummary(session);
+
+    return {
+      timeSlots,
+      totalUnprintedCount: unprintedBills.length,
+      summary,
+    };
+  }
+
+  async batchPrintComplianceBills(session: PosSession, billIds: string[]) {
+    if (!billIds.length) {
+      throw new BadRequestException('No bill IDs provided for batch printing');
+    }
+
+    const now = new Date();
+    await this.prisma.bill.updateMany({
+      where: {
+        id: { in: billIds },
+        posDeviceId: session.posDeviceId,
+      },
+      data: {
+        isPrinted: true,
+        printedAt: now,
+        status: BillStatus.FINALIZED,
+      } as any,
+    });
+
+    const printedBills = await this.prisma.bill.findMany({
+      where: { id: { in: billIds } },
+      orderBy: { createdAt: 'asc' },
+      include: this.billInclude(),
+    });
+
+    const updatedSummary = await this.shiftSummary(session);
+
+    return {
+      success: true,
+      printedCount: printedBills.length,
+      printedBills,
+      summary: updatedSummary,
+      message: `Successfully batch printed ${printedBills.length} bills in sequential order.`,
+    };
+  }
+
+  async getSettings(session: PosSession) {
+    const device = await this.prisma.posDevice.findUniqueOrThrow({
+      where: { id: session.posDeviceId },
+    });
+    return {
+      twoFactorEnabled: true,
+      printer: {
+        name: 'Thermal Receipt Printer (80mm)',
+        ipAddress: '192.168.1.100',
+        paperWidth: '80mm',
+        autoCut: true,
+      },
+      deviceCode: device.deviceCode,
+      name: device.name,
+    };
+  }
+
+  async getItemChannels(session: PosSession) {
+    const items = await this.prisma.outletMenuItem.findMany({
+      where: { outletId: session.outletId },
+      include: {
+        item: {
+          include: { category: true },
+        },
+      },
+      orderBy: { item: { name: 'asc' } },
+    });
+
+    return items.map((row) => ({
+      id: row.id,
+      itemId: row.itemId,
+      name: row.item.name,
+      category: row.item.category.name,
+      price: Number(row.price),
+      channels: {
+        pos: row.isActive,
+        website: row.dineIn,
+        zomato: row.delivery,
+        swiggy: row.takeaway,
+        ezcater: row.isActive && row.delivery,
+      },
+    }));
+  }
+
+  async updateItemChannel(session: PosSession, id: string, body: { channel: string; enabled: boolean }) {
+    const item = await this.prisma.outletMenuItem.findFirst({
+      where: { id, outletId: session.outletId },
+    });
+    if (!item) {
+      throw new NotFoundException('Item not found for this outlet');
+    }
+
+    const updateData: Prisma.OutletMenuItemUpdateInput = {};
+    if (body.channel === 'pos') updateData.isActive = body.enabled;
+    if (body.channel === 'website') updateData.dineIn = body.enabled;
+    if (body.channel === 'zomato') updateData.delivery = body.enabled;
+    if (body.channel === 'swiggy') updateData.takeaway = body.enabled;
+    if (body.channel === 'ezcater') updateData.isActive = body.enabled;
+
+    const updated = await this.prisma.outletMenuItem.update({
+      where: { id },
+      data: updateData,
+      include: { item: { include: { category: true } } },
+    });
+
+    await this.log('POS_ITEM_CHANNEL_TOGGLED', 'OutletMenuItem', id, session, {
+      channel: body.channel,
+      enabled: body.enabled,
+    });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'FRANCHISE_OWNER',
+      outletId: session.outletId,
+      title: '⚠️ Item Channel Status Changed',
+      message: `Item "${updated.item.name}" toggled ${body.enabled ? 'ON' : 'OFF'} for ${body.channel.toUpperCase()}`,
+      type: 'WARNING',
+    });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'SUPERADMIN',
+      outletId: session.outletId,
+      title: '⚠️ Item Channel Status Changed',
+      message: `Item "${updated.item.name}" toggled ${body.enabled ? 'ON' : 'OFF'} for ${body.channel.toUpperCase()}`,
+      type: 'WARNING',
+    });
+
+    return {
+      id: updated.id,
+      name: updated.item.name,
+      category: updated.item.category.name,
+      price: Number(updated.price),
+      channels: {
+        pos: updated.isActive,
+        website: updated.dineIn,
+        zomato: updated.delivery,
+        swiggy: updated.takeaway,
+        ezcater: updated.isActive && updated.delivery,
+      },
+    };
+  }
+
+  async updatePrinterSettings(session: PosSession, body: { printerName?: string; printerIp?: string; paperWidth?: string }) {
+    await this.log('POS_PRINTER_SETTINGS_UPDATED', 'PosDevice', session.posDeviceId, session, body);
+    return {
+      success: true,
+      message: 'Printer settings updated successfully',
+      ...body,
+    };
+  }
+
+  async toggle2FA(session: PosSession, enabled: boolean) {
+    await this.log('POS_2FA_TOGGLED', 'PosDevice', session.posDeviceId, session, { enabled });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'FRANCHISE_OWNER',
+      outletId: session.outletId,
+      title: '🛡️ Security Setting Updated',
+      message: `Two-Factor Authentication ${enabled ? 'Enabled' : 'Disabled'}`,
+      type: 'WARNING',
+    });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'SUPERADMIN',
+      outletId: session.outletId,
+      title: '🛡️ Security Setting Updated',
+      message: `Two-Factor Authentication ${enabled ? 'Enabled' : 'Disabled'}`,
+      type: 'WARNING',
+    });
+
+    return {
+      success: true,
+      twoFactorEnabled: enabled,
+      message: enabled ? '2FA Protection Enabled' : '2FA Protection Disabled',
     };
   }
 

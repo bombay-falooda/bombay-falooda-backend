@@ -74,4 +74,7 @@ export class CreateOutletDto {
   @IsOptional()
   @IsString()
   closingTime?: string;
+
+  @IsOptional()
+  deliveryKmPricing?: Array<{ km: number; price: number }>;
 }

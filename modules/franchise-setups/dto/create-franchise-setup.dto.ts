@@ -157,6 +157,12 @@ class FranchiseSetupPosDto {
   @Min(0)
   extraPermanentPos!: number;
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  extraPosMonthlyPrice?: number;
+
   @IsString()
   billingCycle!: string;
 }

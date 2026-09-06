@@ -189,6 +189,10 @@ export class FranchiseSetupsService {
       };
     });
 
+    const extraPosPrice = Number(
+      dto.pos.extraPosMonthlyPrice ?? this.posMonthlyPrice,
+    );
+
     await this.auditService.createLog({
       actorId,
       action: 'FRANCHISE_SETUP_CREATED',
@@ -199,7 +203,7 @@ export class FranchiseSetupsService {
         outletCount: result.outlets.length,
         posCount: result.posDevices.length,
         extraPosMonthlyAmount:
-          Number(dto.pos.extraPermanentPos || 0) * this.posMonthlyPrice,
+          Number(dto.pos.extraPermanentPos || 0) * extraPosPrice,
       },
     });
 
@@ -222,9 +226,9 @@ export class FranchiseSetupsService {
         billing: {
           defaultPermanentPos: Number(dto.pos.defaultPermanentPos || 1),
           extraPermanentPos: Number(dto.pos.extraPermanentPos || 0),
-          extraPosMonthlyPrice: this.posMonthlyPrice,
+          extraPosMonthlyPrice: extraPosPrice,
           extraPosMonthlyAmount:
-            Number(dto.pos.extraPermanentPos || 0) * this.posMonthlyPrice,
+            Number(dto.pos.extraPermanentPos || 0) * extraPosPrice,
           billingCycle: dto.pos.billingCycle,
         },
       },

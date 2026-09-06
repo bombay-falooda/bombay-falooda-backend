@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsNumber, IsOptional, IsString, MinLength } from 'class-validator';
 
 import { UserRole } from '@app/common';
 
@@ -14,6 +14,10 @@ export class CreateUserDto {
   @IsString()
   phone?: string;
 
+  @IsOptional()
+  @IsString()
+  countryCode?: string;
+
   @IsString()
   @MinLength(8)
   password!: string;
@@ -28,4 +32,25 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   outletId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  salaryAmount?: number;
+
+  @IsOptional()
+  @IsString()
+  salaryFrequency?: string;
+
+  @IsOptional()
+  @IsNumber()
+  salaryPayDay?: number;
+
+  @IsOptional()
+  @IsString()
+  salaryPaymentMethod?: string;
+
+  @IsOptional()
+  @IsString()
+  joiningDate?: string;
 }
+

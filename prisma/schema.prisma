@@ -95,15 +95,26 @@ model User {
   name         String
   email        String?    @unique
   phone        String?    @unique
+  countryCode  String?    @default("+91")
   passwordHash String
   role         UserRole
   status       UserStatus @default(ACTIVE)
   franchiseId  String?
   outletId     String?
+  address      String?
+  state        String?
+  city         String?
+  pincode      String?
   twoFactorEnabled Boolean @default(false)
   twoFactorSecret  String?
   twoFactorMethod  String?
   lastLoginAt  DateTime?
+  salaryAmount        Decimal?  @db.Decimal(10, 2)
+  salaryFrequency     String?   @default("MONTHLY")
+  salaryPayDay        Int?      @default(1)
+  salaryPaymentMethod String?   @default("BANK_TRANSFER")
+  lastSalaryPaidAt    DateTime?
+  joiningDate         DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -114,9 +125,27 @@ model User {
   sessions   UserSession[]
   permissions UserPermission[]
   cancelledBills Bill[] @relation("BillCancelledBy")
+  attendances StaffAttendance[]
 
   @@index([role])
   @@index([status])
+}
+
+model StaffAttendance {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime
+  status    String   @default("ABSENT")
+  note      String?
+  markedBy  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
 }
 
 model Franchise {
@@ -234,6 +263,7 @@ model MenuCategory {
 model MenuItem {
   id          String   @id @default(cuid())
   categoryId  String
+  subCategory String?
   name        String
   description String?
   imageUrl    String?
@@ -290,6 +320,9 @@ model OutletMenuItem {
   itemId    String
   price     Decimal
   isActive  Boolean  @default(true)
+  dineIn    Boolean  @default(true)
+  takeaway  Boolean  @default(true)
+  delivery  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -326,6 +359,13 @@ model Order {
   customerName  String?
   customerPhone String?
   customerEmail String?
+  deliveryAddress String?
+  deliveryLat   Decimal?
+  deliveryLng   Decimal?
+  assignedTeamMemberId String?
+  driverName    String?
+  driverPhone   String?
+  deliveryStatus String?   @default("PENDING")
   notes       String?
   subtotal    Decimal
   taxAmount   Decimal     @default(0)
@@ -379,6 +419,8 @@ model Bill {
   taxAmount   Decimal    @default(0)
   discount    Decimal    @default(0)
   total       Decimal
+  isPrinted   Boolean    @default(false)
+  printedAt   DateTime?
   finalizedAt DateTime?
   cancelledAt DateTime?
   cancelledById String?
@@ -536,3 +578,21 @@ model UserPermission {
   @@index([outletId])
   @@index([posDeviceId])
 }
+
+model NotificationLog {
+  id            String   @id @default(cuid())
+  recipientRole String   @default("FRANCHISE_OWNER") // SUPERADMIN, FRANCHISE_OWNER, ALL
+  outletId      String?
+  franchiseId   String?
+  title         String
+  message       String
+  type          String   @default("INFO") // SUCCESS, INFO, WARNING, ALERT
+  readStatus    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([recipientRole])
+  @@index([outletId])
+  @@index([franchiseId])
+  @@index([createdAt])
+}
+

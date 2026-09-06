@@ -15,6 +15,10 @@ export class CreateTeamMemberDto {
   @IsString()
   phone?: string;
 
+  @IsOptional()
+  @IsString()
+  countryCode?: string;
+
   @IsString()
   @MinLength(8)
   password!: string;
@@ -25,4 +29,20 @@ export class CreateTeamMemberDto {
   @IsOptional()
   @IsString()
   outletId?: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  pincode?: string;
 }

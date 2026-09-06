@@ -241,6 +241,126 @@ export class FranchisePortalService {
     return posDevice;
   }
 
+  async posDeviceDetails(
+    franchiseId: string | null | undefined,
+    posDeviceId: string,
+    range = 'all',
+  ) {
+    const id = this.requireFranchiseId(franchiseId);
+    await this.ensurePosInFranchise(id, posDeviceId);
+
+    const device = await this.prisma.posDevice.findUnique({
+      where: { id: posDeviceId },
+      include: {
+        outlet: {
+          select: { id: true, name: true, code: true, address: true, phone: true },
+        },
+      },
+    });
+
+    if (!device) {
+      throw new NotFoundException('POS device not found');
+    }
+
+    const since = range !== 'all' ? this.dateFromRange(range) : undefined;
+    const billWhere: Prisma.BillWhereInput = {
+      posDeviceId,
+      status: BillStatus.FINALIZED,
+      createdAt: since ? { gte: since } : undefined,
+    };
+
+    const [salesAgg, bills, recentBills] = await Promise.all([
+      this.prisma.bill.aggregate({
+        where: billWhere,
+        _sum: { total: true, subtotal: true, taxAmount: true, discount: true },
+        _avg: { total: true },
+        _count: true,
+      }),
+      this.prisma.bill.findMany({
+        where: billWhere,
+        include: {
+          payments: true,
+          order: { select: { type: true, source: true } },
+          items: { select: { id: true, name: true, quantity: true, total: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.bill.findMany({
+        where: billWhere,
+        take: 30,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          payments: { select: { method: true, amount: true } },
+          order: { select: { type: true, source: true } },
+          items: { select: { id: true, name: true, quantity: true } },
+        },
+      }),
+    ]);
+
+    const paymentBreakdown: Record<string, { count: number; total: number }> = {
+      CASH: { count: 0, total: 0 },
+      UPI: { count: 0, total: 0 },
+      CARD: { count: 0, total: 0 },
+      ONLINE: { count: 0, total: 0 },
+      OTHER: { count: 0, total: 0 },
+    };
+
+    for (const b of bills) {
+      if (b.payments && b.payments.length > 0) {
+        for (const p of b.payments) {
+          const m = p.method || 'CASH';
+          if (!paymentBreakdown[m]) {
+            paymentBreakdown[m] = { count: 0, total: 0 };
+          }
+          paymentBreakdown[m].count += 1;
+          paymentBreakdown[m].total += Number(p.amount);
+        }
+      } else {
+        paymentBreakdown.CASH.count += 1;
+        paymentBreakdown.CASH.total += Number(b.total);
+      }
+    }
+
+    const totalSales = Number(salesAgg._sum.total ?? 0);
+    const billCount = salesAgg._count;
+    const avgBillValue = Number(salesAgg._avg.total ?? 0);
+
+    return {
+      device,
+      range,
+      metrics: {
+        totalSales,
+        totalSalesFormatted: this.formatInr(totalSales),
+        billCount,
+        avgBillValue,
+        avgBillValueFormatted: this.formatInr(avgBillValue),
+        subtotal: Number(salesAgg._sum.subtotal ?? 0),
+        taxAmount: Number(salesAgg._sum.taxAmount ?? 0),
+        discount: Number(salesAgg._sum.discount ?? 0),
+      },
+      paymentBreakdown: Object.entries(paymentBreakdown).map(([method, data]) => ({
+        method,
+        count: data.count,
+        total: data.total,
+        totalFormatted: this.formatInr(data.total),
+      })),
+      recentBills: recentBills.map((b) => ({
+        id: b.id,
+        billNumber: b.billNumber,
+        customerName: b.customerName || 'Walk-in Customer',
+        customerPhone: b.customerPhone || '-',
+        total: Number(b.total),
+        totalFormatted: this.formatInr(Number(b.total)),
+        orderType: b.order?.type || 'DINE_IN',
+        orderSource: b.order?.source || 'POS',
+        paymentMethod: b.payments?.[0]?.method || 'CASH',
+        itemsCount: b.items.length,
+        itemsSummary: b.items.map((i) => `${i.name} (x${i.quantity})`).join(', '),
+        finalizedAt: b.finalizedAt || b.createdAt,
+      })),
+    };
+  }
+
   team(franchiseId?: string | null) {
     const id = this.requireFranchiseId(franchiseId);
     return this.prisma.user.findMany({
@@ -284,12 +404,17 @@ export class FranchisePortalService {
         name: dto.name,
         email: dto.email,
         phone: dto.phone,
+        countryCode: dto.countryCode || '+91',
         passwordHash: await bcrypt.hash(dto.password, this.passwordSaltRounds),
         role: dto.role as UserRole,
         franchiseId: id,
         outletId: dto.outletId,
+        address: dto.address,
+        state: dto.state,
+        city: dto.city,
+        pincode: dto.pincode,
         twoFactorEnabled: false,
-      },
+      } as any,
       include: { outlet: true, permissions: true },
     });
 
@@ -429,11 +554,55 @@ export class FranchisePortalService {
   ) {
     const id = this.requireFranchiseId(franchiseId);
     await this.assertFranchisePermission(id, 'canManageMenu');
-    await this.ensureMenuCategoryExists(dto.categoryId);
+
+    let categoryId = dto.categoryId;
+    if (!categoryId && dto.categoryName) {
+      let cat = await this.prisma.menuCategory.findFirst({
+        where: { name: { equals: dto.categoryName, mode: 'insensitive' } },
+      });
+      if (!cat) {
+        cat = await this.prisma.menuCategory.create({
+          data: { name: dto.categoryName, sortOrder: 10 },
+        });
+      }
+      categoryId = cat.id;
+    }
+
+    if (!categoryId) {
+      let cat = await this.prisma.menuCategory.findFirst({
+        orderBy: { sortOrder: 'asc' },
+      });
+      if (!cat) {
+        cat = await this.prisma.menuCategory.create({
+          data: { name: 'Falooda', sortOrder: 1 },
+        });
+      }
+      categoryId = cat.id;
+    }
+
     const item = await this.prisma.menuItem.create({
       data: {
-        ...dto,
+        name: dto.name,
+        description: dto.description,
+        imageUrl: dto.imageUrl,
         basePrice: new Prisma.Decimal(dto.basePrice),
+        isActive: dto.isActive ?? true,
+        categoryId,
+        subCategory: dto.subCategory,
+        addonGroups: dto.addonGroups && dto.addonGroups.length > 0 ? {
+          create: dto.addonGroups.map((g) => ({
+            name: g.name,
+            minSelect: g.minSelect ?? 0,
+            maxSelect: g.maxSelect ?? 1,
+            isRequired: g.isRequired ?? false,
+            addons: g.addons && g.addons.length > 0 ? {
+              create: g.addons.map((a) => ({
+                name: a.name,
+                price: new Prisma.Decimal(a.price),
+              })),
+            } : undefined,
+          })),
+        } : undefined,
       },
       include: {
         category: true,
@@ -453,13 +622,33 @@ export class FranchisePortalService {
     const id = this.requireFranchiseId(franchiseId);
     await this.assertFranchisePermission(id, 'canManageMenu');
     await this.ensureMenuItemExists(itemId);
-    if (dto.categoryId) {
-      await this.ensureMenuCategoryExists(dto.categoryId);
+
+    let categoryId = dto.categoryId;
+    if (!categoryId && dto.categoryName) {
+      let cat = await this.prisma.menuCategory.findFirst({
+        where: { name: { equals: dto.categoryName, mode: 'insensitive' } },
+      });
+      if (!cat) {
+        cat = await this.prisma.menuCategory.create({
+          data: { name: dto.categoryName, sortOrder: 10 },
+        });
+      }
+      categoryId = cat.id;
     }
+
+    if (categoryId) {
+      await this.ensureMenuCategoryExists(categoryId);
+    }
+
     const item = await this.prisma.menuItem.update({
       where: { id: itemId },
       data: {
-        ...dto,
+        name: dto.name,
+        description: dto.description,
+        imageUrl: dto.imageUrl,
+        categoryId: categoryId || undefined,
+        subCategory: dto.subCategory,
+        isActive: dto.isActive,
         basePrice:
           dto.basePrice === undefined
             ? undefined

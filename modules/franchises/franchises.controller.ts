@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 
 import { CurrentUser, JwtUser, Roles, UserRole } from '@app/common';
 
@@ -26,8 +26,8 @@ export class FranchisesController {
   }
 
   @Get(':id')
-  findById(@Param('id') id: string) {
-    return this.franchisesService.findByIdOrFail(id);
+  findById(@Param('id') id: string, @Query('range') range?: string) {
+    return this.franchisesService.findDetailByIdOrFail(id, range || '1m');
   }
 
   @Patch(':id')

@@ -97,6 +97,306 @@ export class OutletsService {
     return outlet;
   }
 
+  async getMenuCategories() {
+    let categories = await this.prisma.menuCategory.findMany({
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    if (categories.length === 0) {
+      // Seed default categories
+      const defaults = [
+        { name: 'Falooda', sortOrder: 1 },
+        { name: 'Specialty Faloodas', sortOrder: 2 },
+        { name: 'Ice Creams', sortOrder: 3 },
+        { name: 'Beverages', sortOrder: 4 },
+      ];
+      for (const d of defaults) {
+        await this.prisma.menuCategory.create({ data: d });
+      }
+      categories = await this.prisma.menuCategory.findMany({
+        orderBy: { sortOrder: 'asc' },
+      });
+    }
+
+    return categories;
+  }
+
+  async createOutletMenuItem(
+    outletId: string,
+    dto: {
+      name: string;
+      description?: string;
+      imageUrl?: string;
+      price: number;
+      categoryId?: string;
+      categoryName?: string;
+      subCategory?: string;
+      isActive?: boolean;
+      dineIn?: boolean;
+      takeaway?: boolean;
+      delivery?: boolean;
+      targetOutletIds?: string[];
+      targetFranchiseIds?: string[];
+      addonGroups?: Array<{
+        name: string;
+        minSelect?: number;
+        maxSelect?: number;
+        isRequired?: boolean;
+        addons?: Array<{ name: string; price: number }>;
+      }>;
+    },
+    actorId?: string,
+  ) {
+    let categoryId = dto.categoryId;
+    if (!categoryId && dto.categoryName) {
+      let cat = await this.prisma.menuCategory.findFirst({
+        where: { name: { equals: dto.categoryName, mode: 'insensitive' } },
+      });
+      if (!cat) {
+        cat = await this.prisma.menuCategory.create({
+          data: { name: dto.categoryName, sortOrder: 10 },
+        });
+      }
+      categoryId = cat.id;
+    }
+
+    if (!categoryId) {
+      const defaultCat = (await this.getMenuCategories())[0];
+      categoryId = defaultCat.id;
+    }
+
+    // Target Outlet IDs
+    const targetOutletIdsSet = new Set<string>();
+    if (outletId) targetOutletIdsSet.add(outletId);
+    if (dto.targetOutletIds && dto.targetOutletIds.length > 0) {
+      dto.targetOutletIds.forEach((id) => targetOutletIdsSet.add(id));
+    }
+    if (dto.targetFranchiseIds && dto.targetFranchiseIds.length > 0) {
+      const outletsInFranchises = await this.prisma.outlet.findMany({
+        where: { franchiseId: { in: dto.targetFranchiseIds } },
+        select: { id: true },
+      });
+      outletsInFranchises.forEach((o) => targetOutletIdsSet.add(o.id));
+    }
+
+    const targetOutletIds = Array.from(targetOutletIdsSet);
+
+    // Create MenuItem with optional addonGroups
+    const menuItem = await this.prisma.menuItem.create({
+      data: {
+        name: dto.name,
+        description: dto.description,
+        imageUrl: dto.imageUrl,
+        basePrice: new Prisma.Decimal(dto.price),
+        categoryId,
+        subCategory: dto.subCategory,
+        addonGroups: dto.addonGroups && dto.addonGroups.length > 0 ? {
+          create: dto.addonGroups.map((g) => ({
+            name: g.name,
+            minSelect: g.minSelect ?? 0,
+            maxSelect: g.maxSelect ?? 1,
+            isRequired: g.isRequired ?? false,
+            addons: g.addons && g.addons.length > 0 ? {
+              create: g.addons.map((a) => ({
+                name: a.name,
+                price: new Prisma.Decimal(a.price),
+              })),
+            } : undefined,
+          })),
+        } : undefined,
+      },
+    });
+
+    // Create OutletMenuItem for each target outlet
+    let firstOutletMenuItem = null;
+    for (const tOutletId of targetOutletIds) {
+      const created = await this.prisma.outletMenuItem.upsert({
+        where: {
+          outletId_itemId: {
+            outletId: tOutletId,
+            itemId: menuItem.id,
+          },
+        },
+        update: {
+          price: new Prisma.Decimal(dto.price),
+          isActive: dto.isActive ?? true,
+          dineIn: dto.dineIn ?? true,
+          takeaway: dto.takeaway ?? true,
+          delivery: dto.delivery ?? true,
+        },
+        create: {
+          outletId: tOutletId,
+          itemId: menuItem.id,
+          price: new Prisma.Decimal(dto.price),
+          isActive: dto.isActive ?? true,
+          dineIn: dto.dineIn ?? true,
+          takeaway: dto.takeaway ?? true,
+          delivery: dto.delivery ?? true,
+        },
+        include: {
+          item: {
+            include: {
+              category: true,
+              addonGroups: {
+                include: {
+                  addons: true,
+                },
+              },
+            },
+          },
+        },
+      });
+      if (!firstOutletMenuItem) firstOutletMenuItem = created;
+    }
+
+    await this.auditService.createLog({
+      actorId,
+      action: 'OUTLET_MENU_ITEM_CREATED',
+      entityType: 'OutletMenuItem',
+      entityId: menuItem.id,
+      metadata: { targetOutletsCount: targetOutletIds.length, itemName: dto.name, price: dto.price },
+    });
+
+    return firstOutletMenuItem;
+  }
+
+  async copyMenuFromOutlet(
+    targetOutletId: string,
+    sourceOutletId: string,
+    actorId?: string,
+  ) {
+    await this.findByIdOrFail(targetOutletId);
+    await this.findByIdOrFail(sourceOutletId);
+
+    const sourceItems = await this.prisma.outletMenuItem.findMany({
+      where: { outletId: sourceOutletId },
+      include: {
+        item: true,
+      },
+    });
+
+    let copiedCount = 0;
+    for (const sourceItem of sourceItems) {
+      await this.prisma.outletMenuItem.upsert({
+        where: {
+          outletId_itemId: {
+            outletId: targetOutletId,
+            itemId: sourceItem.itemId,
+          },
+        },
+        update: {
+          price: sourceItem.price,
+          isActive: sourceItem.isActive,
+          dineIn: sourceItem.dineIn,
+          takeaway: sourceItem.takeaway,
+          delivery: sourceItem.delivery,
+        },
+        create: {
+          outletId: targetOutletId,
+          itemId: sourceItem.itemId,
+          price: sourceItem.price,
+          isActive: sourceItem.isActive,
+          dineIn: sourceItem.dineIn,
+          takeaway: sourceItem.takeaway,
+          delivery: sourceItem.delivery,
+        },
+      });
+      copiedCount++;
+    }
+
+    await this.auditService.createLog({
+      actorId,
+      action: 'OUTLET_MENU_COPIED',
+      entityType: 'Outlet',
+      entityId: targetOutletId,
+      metadata: { sourceOutletId, copiedCount },
+    });
+
+    return { success: true, copiedCount };
+  }
+
+  async updateOutletMenuItem(
+    outletId: string,
+    outletMenuItemId: string,
+    dto: {
+      price?: number;
+      isActive?: boolean;
+      dineIn?: boolean;
+      takeaway?: boolean;
+      delivery?: boolean;
+    },
+    actorId?: string,
+  ) {
+    const existing = await this.prisma.outletMenuItem.findFirst({
+      where: { id: outletMenuItemId, outletId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Outlet menu item not found');
+    }
+
+    const updated = await this.prisma.outletMenuItem.update({
+      where: { id: outletMenuItemId },
+      data: {
+        price: dto.price === undefined ? undefined : new Prisma.Decimal(dto.price),
+        isActive: dto.isActive,
+        dineIn: dto.dineIn,
+        takeaway: dto.takeaway,
+        delivery: dto.delivery,
+      },
+      include: {
+        item: {
+          include: {
+            category: true,
+            addonGroups: {
+              include: {
+                addons: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    await this.auditService.createLog({
+      actorId,
+      action: 'OUTLET_MENU_ITEM_UPDATED',
+      entityType: 'OutletMenuItem',
+      entityId: outletMenuItemId,
+      metadata: { ...dto },
+    });
+
+    return updated;
+  }
+
+  async deleteOutletMenuItem(
+    outletId: string,
+    outletMenuItemId: string,
+    actorId?: string,
+  ) {
+    const existing = await this.prisma.outletMenuItem.findFirst({
+      where: { id: outletMenuItemId, outletId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Outlet menu item not found');
+    }
+
+    await this.prisma.outletMenuItem.delete({
+      where: { id: outletMenuItemId },
+    });
+
+    await this.auditService.createLog({
+      actorId,
+      action: 'OUTLET_MENU_ITEM_DELETED',
+      entityType: 'OutletMenuItem',
+      entityId: outletMenuItemId,
+      metadata: { outletId, itemId: existing.itemId },
+    });
+
+    return { success: true };
+  }
+
   private async ensureCodeIsAvailable(code: string) {
     const outlet = await this.outletsRepository.findByCode(code);
 
@@ -137,6 +437,9 @@ export class OutletsService {
       delivery: dto.delivery,
       onlineOrderingEnabled: dto.onlineOrderingEnabled,
       serviceRadiusKm: dto.serviceRadiusKm,
+      deliveryKmPricing: dto.deliveryKmPricing
+        ? (dto.deliveryKmPricing as unknown as Prisma.InputJsonValue)
+        : undefined,
       openingTime: dto.openingTime,
       closingTime: dto.closingTime,
       franchise: dto.franchiseId
@@ -162,6 +465,12 @@ export class OutletsService {
       delivery: dto.delivery,
       onlineOrderingEnabled: dto.onlineOrderingEnabled,
       serviceRadiusKm: dto.serviceRadiusKm,
+      deliveryKmPricing:
+        dto.deliveryKmPricing === undefined
+          ? undefined
+          : dto.deliveryKmPricing === null
+            ? Prisma.DbNull
+            : (dto.deliveryKmPricing as unknown as Prisma.InputJsonValue),
       openingTime: dto.openingTime,
       closingTime: dto.closingTime,
       franchise:

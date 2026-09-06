@@ -7,6 +7,14 @@ export class UpdateMenuItemDto {
 
   @IsOptional()
   @IsString()
+  categoryName?: string;
+
+  @IsOptional()
+  @IsString()
+  subCategory?: string;
+
+  @IsOptional()
+  @IsString()
   name?: string;
 
   @IsOptional()

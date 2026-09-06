@@ -49,6 +49,11 @@ export class ReportsService {
       status: BillStatus.FINALIZED,
       createdAt: { gte: since },
       outlet: outletWhere,
+      OR: [
+        { isPrinted: true } as Prisma.BillWhereInput,
+        { order: { source: { in: [OrderSource.WEBSITE, OrderSource.ZOMATO, OrderSource.SWIGGY, OrderSource.EZCATER] } } },
+        { order: { type: OrderType.DELIVERY } },
+      ],
     };
     const orderBillFilter = this.billOrderFilter(source, type);
     if (orderBillFilter) {
@@ -278,7 +283,7 @@ export class ReportsService {
     return bills.reduce((total, bill) => total + Number(bill.total), 0);
   }
 
-  private dateFromRange(range: string) {
+  private dateFromRange(range: string, isFranchiseOwner = false) {
     const now = new Date();
     const hours: Record<string, number> = {
       '1h': 1,
@@ -286,9 +291,18 @@ export class ReportsService {
       '1d': 24,
       '1w': 24 * 7,
       '1m': 24 * 30,
+      '3m': 24 * 90,
+      '6m': 24 * 180,
+      '1y': 24 * 365,
     };
 
-    return new Date(now.getTime() - (hours[range] || 24) * 60 * 60 * 1000);
+    let selectedHours = hours[range] || 24;
+
+    if (isFranchiseOwner && selectedHours > 24 * 30) {
+      selectedHours = 24 * 30;
+    }
+
+    return new Date(now.getTime() - selectedHours * 60 * 60 * 1000);
   }
 
   private enumValue<T extends Record<string, string>>(

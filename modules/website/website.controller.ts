@@ -21,4 +21,9 @@ export class WebsiteController {
   createOrder(@Body() dto: CreateWebsiteOrderDto) {
     return this.websiteService.createOrder(dto);
   }
+
+  @Post('auth/google')
+  googleAuth(@Body() body: { credential?: string; email?: string; name?: string }) {
+    return this.websiteService.googleLogin(body.credential, body.email, body.name);
+  }
 }

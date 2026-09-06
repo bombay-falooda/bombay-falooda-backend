@@ -100,12 +100,88 @@ export class PosTerminalController {
   acceptDigitalOrder(
     @CurrentPosSession() session: PosSession,
     @Param('id') id: string,
+    @Body() body?: { driverId?: string; driverName?: string; driverPhone?: string },
   ) {
-    return this.posTerminalService.acceptDigitalOrder(session, id);
+    return this.posTerminalService.acceptDigitalOrder(session, id, body);
+  }
+
+  @Get('delivery-orders/:id')
+  getDeliveryOrderDetails(@Param('id') id: string) {
+    return this.posTerminalService.getDeliveryOrderDetails(id);
+  }
+
+  @Patch('delivery-orders/:id/status')
+  updateDeliveryStatus(@Param('id') id: string, @Body('deliveryStatus') deliveryStatus: string) {
+    return this.posTerminalService.updateDeliveryStatus(id, deliveryStatus);
   }
 
   @Get('shift-summary')
   shiftSummary(@CurrentPosSession() session: PosSession) {
     return this.posTerminalService.shiftSummary(session);
   }
+
+  @Get('team-members')
+  teamMembers(@CurrentPosSession() session: PosSession) {
+    return this.posTerminalService.teamMembers(session);
+  }
+
+  @Post('shift/start')
+  startDay(@CurrentPosSession() session: PosSession, @Body('openingFloat') openingFloat?: number) {
+    return this.posTerminalService.startDay(session, openingFloat ?? 0);
+  }
+
+  @Post('shift/end')
+  endDay(@CurrentPosSession() session: PosSession, @Body('closingNotes') closingNotes?: string) {
+    return this.posTerminalService.endDay(session, closingNotes);
+  }
+
+  @Get('settings')
+  getSettings(@CurrentPosSession() session: PosSession) {
+    return this.posTerminalService.getSettings(session);
+  }
+
+  @Patch('settings/printer')
+  updatePrinterSettings(
+    @CurrentPosSession() session: PosSession,
+    @Body() body: { printerName?: string; printerIp?: string; paperWidth?: string },
+  ) {
+    return this.posTerminalService.updatePrinterSettings(session, body);
+  }
+
+  @Patch('settings/2fa')
+  toggle2FA(
+    @CurrentPosSession() session: PosSession,
+    @Body('enabled') enabled: boolean,
+  ) {
+    return this.posTerminalService.toggle2FA(session, enabled ?? true);
+  }
+
+  @Get('item-channels')
+  getItemChannels(@CurrentPosSession() session: PosSession) {
+    return this.posTerminalService.getItemChannels(session);
+  }
+
+  @Patch('item-channels/:id')
+  updateItemChannel(
+    @CurrentPosSession() session: PosSession,
+    @Param('id') id: string,
+    @Body() body: { channel: string; enabled: boolean },
+  ) {
+    return this.posTerminalService.updateItemChannel(session, id, body);
+  }
+
+  @Get('gst-compliance/unprinted-bills')
+  getUnprintedBills(@CurrentPosSession() session: PosSession) {
+    return this.posTerminalService.getUnprintedBills(session);
+  }
+
+  @Post('gst-compliance/batch-print')
+  batchPrintComplianceBills(
+    @CurrentPosSession() session: PosSession,
+    @Body('billIds') billIds: string[],
+  ) {
+    return this.posTerminalService.batchPrintComplianceBills(session, billIds || []);
+  }
 }
+
+

@@ -138,9 +138,28 @@ export class UsersRepository {
       outletId: true,
       twoFactorEnabled: true,
       twoFactorMethod: true,
+      salaryAmount: true,
+      salaryFrequency: true,
+      salaryPayDay: true,
+      salaryPaymentMethod: true,
+      lastSalaryPaidAt: true,
+      joiningDate: true,
       lastLoginAt: true,
       createdAt: true,
       updatedAt: true,
+      franchise: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      outlet: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+        },
+      },
     } satisfies Prisma.UserSelect;
   }
 

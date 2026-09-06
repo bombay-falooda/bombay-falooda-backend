@@ -41,6 +41,16 @@ export class FranchisesService {
     return franchise;
   }
 
+  async findDetailByIdOrFail(id: string, range = "1m") {
+    const franchise = await this.franchisesRepository.findDetailById(id, range);
+
+    if (!franchise) {
+      throw new NotFoundException('Franchise not found');
+    }
+
+    return franchise;
+  }
+
   async update(id: string, dto: UpdateFranchiseDto, actorId?: string) {
     await this.findByIdOrFail(id);
     const franchise = await this.franchisesRepository.update(id, dto);

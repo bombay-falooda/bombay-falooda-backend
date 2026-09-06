@@ -77,4 +77,7 @@ export class UpdateOutletDto {
   @IsOptional()
   @IsString()
   closingTime?: string | null;
+
+  @IsOptional()
+  deliveryKmPricing?: Array<{ km: number; price: number }> | null;
 }

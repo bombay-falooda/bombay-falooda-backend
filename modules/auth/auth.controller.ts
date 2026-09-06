@@ -50,6 +50,12 @@ export class AuthController {
     return this.authService.enableAuthenticator(user.id, dto);
   }
 
+  @Post('2fa/disable')
+  @UseGuards(JwtAuthGuard)
+  disableAuthenticator(@CurrentUser() user: JwtUser) {
+    return this.authService.disableAuthenticator(user.id);
+  }
+
   @Post('refresh')
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refresh(dto);

@@ -84,6 +84,19 @@ export class FranchisePortalController {
     return this.franchisePortalService.posDevices(user.franchiseId);
   }
 
+  @Get('pos-devices/:id')
+  posDeviceDetails(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+    @Query('range') range?: string,
+  ) {
+    return this.franchisePortalService.posDeviceDetails(
+      user.franchiseId,
+      id,
+      range,
+    );
+  }
+
   @Post('pos-devices/request')
   requestPosDevice(
     @CurrentUser() user: JwtUser,

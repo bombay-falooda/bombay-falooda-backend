@@ -15,6 +15,8 @@ import { PosTerminalModule } from '../../../modules/pos-terminal/pos-terminal.mo
 import { ReportsModule } from '../../../modules/reports/reports.module';
 import { UsersModule } from '../../../modules/users/users.module';
 import { WebsiteModule } from '../../../modules/website/website.module';
+import { NotificationsModule } from '../../../modules/notifications/notifications.module';
+import { DownloadsModule } from '../../../modules/downloads/downloads.module';
 import { HealthModule } from './health/health.module';
 
 @Module({
@@ -34,6 +36,8 @@ import { HealthModule } from './health/health.module';
     PosTerminalModule,
     ReportsModule,
     WebsiteModule,
+    NotificationsModule,
+    DownloadsModule,
   ],
 })
 export class ApiModule {}

@@ -24,7 +24,37 @@ export class OutletsRepository {
   findById(id: string) {
     return this.prisma.outlet.findUnique({
       where: { id },
-      select: this.defaultSelect(),
+      include: {
+        franchise: true,
+        posDevices: {
+          orderBy: { createdAt: 'asc' },
+        },
+        users: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            role: true,
+            status: true,
+            createdAt: true,
+          },
+        },
+        outletMenuItems: {
+          include: {
+            item: {
+              include: {
+                category: true,
+                addonGroups: {
+                  include: {
+                    addons: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
   }
 
@@ -71,6 +101,7 @@ export class OutletsRepository {
       delivery: true,
       onlineOrderingEnabled: true,
       serviceRadiusKm: true,
+      deliveryKmPricing: true,
       openingTime: true,
       closingTime: true,
       menuSetupStatus: true,

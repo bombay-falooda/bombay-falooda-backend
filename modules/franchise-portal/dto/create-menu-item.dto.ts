@@ -1,8 +1,17 @@
 import { IsBoolean, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateMenuItemDto {
+  @IsOptional()
   @IsString()
-  categoryId!: string;
+  categoryId?: string;
+
+  @IsOptional()
+  @IsString()
+  categoryName?: string;
+
+  @IsOptional()
+  @IsString()
+  subCategory?: string;
 
   @IsString()
   name!: string;
@@ -22,4 +31,13 @@ export class CreateMenuItemDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  addonGroups?: Array<{
+    name: string;
+    minSelect?: number;
+    maxSelect?: number;
+    isRequired?: boolean;
+    addons?: Array<{ name: string; price: number }>;
+  }>;
 }

@@ -74,9 +74,18 @@ export class UsersService {
       name: dto.name,
       email: dto.email,
       phone: dto.phone,
+      countryCode: dto.countryCode || '+91',
       passwordHash,
       role: dto.role as unknown as PrismaUserRole,
       twoFactorEnabled: false,
+      salaryAmount:
+        dto.salaryAmount !== undefined
+          ? new Prisma.Decimal(dto.salaryAmount)
+          : undefined,
+      salaryFrequency: dto.salaryFrequency || 'MONTHLY',
+      salaryPayDay: dto.salaryPayDay || 5,
+      salaryPaymentMethod: dto.salaryPaymentMethod || 'BANK_TRANSFER',
+      joiningDate: dto.joiningDate ? new Date(dto.joiningDate) : undefined,
       franchise: dto.franchiseId
         ? { connect: { id: dto.franchiseId } }
         : undefined,
@@ -316,5 +325,235 @@ export class UsersService {
     if (!outlet) {
       throw new NotFoundException('Outlet not found');
     }
+  }
+
+  // --- SALARY & ATTENDANCE METHODS ---
+
+  async updateSalaryDetails(
+    userId: string,
+    dto: {
+      salaryAmount?: number;
+      salaryFrequency?: string;
+      salaryPayDay?: number;
+      salaryPaymentMethod?: string;
+      joiningDate?: string;
+    },
+    actorId?: string,
+  ) {
+    await this.findByIdOrFail(userId);
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        salaryAmount:
+          dto.salaryAmount === undefined
+            ? undefined
+            : new Prisma.Decimal(dto.salaryAmount),
+        salaryFrequency: dto.salaryFrequency,
+        salaryPayDay: dto.salaryPayDay,
+        salaryPaymentMethod: dto.salaryPaymentMethod,
+        joiningDate: dto.joiningDate ? new Date(dto.joiningDate) : undefined,
+      },
+      select: this.usersRepository['safeSelect'](),
+    });
+
+    await this.auditService.createLog({
+      actorId,
+      action: 'USER_SALARY_UPDATED',
+      entityType: 'User',
+      entityId: userId,
+      metadata: { ...dto },
+    });
+
+    return updated;
+  }
+
+  async markAttendance(
+    userId: string,
+    dto: { date: string; status: string; note?: string },
+    actorId?: string,
+  ) {
+    await this.findByIdOrFail(userId);
+
+    const dateObj = new Date(dto.date);
+    dateObj.setUTCHours(0, 0, 0, 0);
+
+    const record = await this.prisma.staffAttendance.upsert({
+      where: {
+        userId_date: {
+          userId,
+          date: dateObj,
+        },
+      },
+      create: {
+        userId,
+        date: dateObj,
+        status: dto.status,
+        note: dto.note,
+        markedBy: actorId,
+      },
+      update: {
+        status: dto.status,
+        note: dto.note,
+        markedBy: actorId,
+      },
+    });
+
+    await this.auditService.createLog({
+      actorId,
+      action: 'STAFF_ATTENDANCE_MARKED',
+      entityType: 'StaffAttendance',
+      entityId: record.id,
+      metadata: { userId, date: dto.date, status: dto.status },
+    });
+
+    return record;
+  }
+
+  async removeAttendance(userId: string, dateStr: string, actorId?: string) {
+    const dateObj = new Date(dateStr);
+    dateObj.setUTCHours(0, 0, 0, 0);
+
+    await this.prisma.staffAttendance.deleteMany({
+      where: {
+        userId,
+        date: dateObj,
+      },
+    });
+
+    await this.auditService.createLog({
+      actorId,
+      action: 'STAFF_ATTENDANCE_REMOVED',
+      entityType: 'StaffAttendance',
+      entityId: userId,
+      metadata: { userId, date: dateStr },
+    });
+
+    return { success: true };
+  }
+
+  async getStaffPayrollDetails(userId: string) {
+    const user = await this.findByIdOrFail(userId);
+
+    const now = new Date();
+    const payDay = user.salaryPayDay || 1;
+
+    // Calculate cycle dates
+    let cycleStart = new Date(now.getFullYear(), now.getMonth(), payDay);
+    let cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, payDay);
+
+    if (now.getDate() < payDay) {
+      cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, payDay);
+      cycleEnd = new Date(now.getFullYear(), now.getMonth(), payDay);
+    }
+
+    const totalCycleDays = Math.max(
+      1,
+      Math.round((cycleEnd.getTime() - cycleStart.getTime()) / (1000 * 3600 * 24)),
+    );
+
+    // Fetch attendances in this cycle
+    const attendances = await this.prisma.staffAttendance.findMany({
+      where: {
+        userId,
+        date: {
+          gte: cycleStart,
+          lt: cycleEnd,
+        },
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    let totalAbsentDays = 0;
+    attendances.forEach((att) => {
+      if (att.status === 'ABSENT') {
+        totalAbsentDays += 1;
+      } else if (att.status === 'HALF_DAY') {
+        totalAbsentDays += 0.5;
+      }
+    });
+
+    const salaryAmount = user.salaryAmount ? Number(user.salaryAmount) : 0;
+    const dailyRate = salaryAmount > 0 ? salaryAmount / totalCycleDays : 0;
+    const deductionAmount = Math.round(dailyRate * totalAbsentDays);
+    const netPayableSalary = Math.max(0, salaryAmount - deductionAmount);
+
+    return {
+      user,
+      payrollCycle: {
+        cycleStart: cycleStart.toISOString().split('T')[0],
+        cycleEnd: cycleEnd.toISOString().split('T')[0],
+        payDay,
+        totalCycleDays,
+        salaryAmount,
+        dailyRate: Math.round(dailyRate),
+        totalAbsentDays,
+        deductionAmount,
+        netPayableSalary,
+      },
+      attendances,
+    };
+  }
+
+  async getSalaryReminders() {
+    const now = new Date();
+    const todayDay = now.getDate();
+    const targetDays = [todayDay, todayDay + 1, todayDay + 2];
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        status: 'ACTIVE',
+        salaryAmount: { not: null },
+        salaryPayDay: { in: targetDays },
+      },
+      select: this.usersRepository['safeSelect'](),
+    });
+
+    return users.map((u) => {
+      const payDay = u.salaryPayDay || 1;
+      const daysLeft = payDay - todayDay;
+      let statusLabel = 'Due Today';
+      if (daysLeft === 1) statusLabel = 'Due Tomorrow';
+      else if (daysLeft === 2) statusLabel = 'Due in 2 Days';
+
+      return {
+        ...u,
+        dueStatus: statusLabel,
+        daysLeft,
+      };
+    });
+  }
+
+  async getPayrollSummary(franchiseId?: string) {
+    const whereCondition: Prisma.UserWhereInput = {
+      status: 'ACTIVE',
+      salaryAmount: { not: null },
+    };
+
+    if (franchiseId) {
+      whereCondition.franchiseId = franchiseId;
+    }
+
+    const users = await this.prisma.user.findMany({
+      where: whereCondition,
+      select: {
+        id: true,
+        name: true,
+        salaryAmount: true,
+        franchiseId: true,
+        outletId: true,
+      },
+    });
+
+    const totalStaffWithSalary = users.length;
+    const totalMonthlyPayroll = users.reduce(
+      (sum, u) => sum + (u.salaryAmount ? Number(u.salaryAmount) : 0),
+      0,
+    );
+
+    return {
+      totalStaffWithSalary,
+      totalMonthlyPayroll,
+    };
   }
 }
