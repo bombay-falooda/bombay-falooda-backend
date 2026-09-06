@@ -7,6 +7,7 @@ coverage/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-*.exe
-public/downloads/*.exe
+# executables allowed in public/downloads
+!public/downloads/*.exe
+
 dist/
