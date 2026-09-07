@@ -1216,6 +1216,48 @@ export class PosTerminalService {
     return trimmed || undefined;
   }
 
+  async processOnlineWebhookOrder(data: { source: string; rawPayload: any }) {
+    const outlet = await this.prisma.outlet.findFirst();
+    if (!outlet) {
+      return { status: 'error', message: 'No active outlet found for online order routing' };
+    }
+
+    const payload = data.rawPayload || {};
+    const customerName = payload.customer_name || payload.order?.details?.customer?.name || 'Online Customer';
+    const customerPhone = payload.customer_phone || payload.order?.details?.customer?.phone || '9876543210';
+    const totalAmount = Number(payload.total_amount || payload.order?.details?.order_total || 0);
+
+    const order = await this.prisma.order.create({
+      data: {
+        outletId: outlet.id,
+        source: (data.source === 'ZOMATO' ? OrderSource.ZOMATO : data.source === 'SWIGGY' ? OrderSource.SWIGGY : OrderSource.EZCATER) as any,
+        type: OrderType.DELIVERY,
+        status: OrderStatus.ACCEPTED,
+        customerName,
+        customerPhone,
+        total: totalAmount,
+        subtotal: totalAmount,
+        taxAmount: 0,
+        discount: 0,
+        notes: `Online Order via ${data.source}`,
+      },
+    });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'FRANCHISE_OWNER',
+      outletId: outlet.id,
+      title: `🛵 New ${data.source} Order Received!`,
+      message: `Order #${order.id.slice(-6)} (${customerName}) for INR ${totalAmount}`,
+      type: 'INFO',
+    });
+
+    return {
+      status: 'success',
+      orderId: order.id,
+      message: `Online order from ${data.source} received & routed to POS Live Orders`,
+    };
+  }
+
   private log(
     action: string,
     entityType: string,

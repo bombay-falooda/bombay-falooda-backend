@@ -7,11 +7,12 @@ import { AuditModule } from '../audit/audit.module';
 import { PosAuthModule } from '../pos-auth/pos-auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PosTerminalController } from './pos-terminal.controller';
+import { OnlineOrdersWebhookController } from './online-orders-webhook.controller';
 import { PosTerminalService } from './pos-terminal.service';
 
 @Module({
   imports: [DatabaseModule, AuditModule, JwtModule.register({}), PosAuthModule, NotificationsModule],
-  controllers: [PosTerminalController],
+  controllers: [PosTerminalController, OnlineOrdersWebhookController],
   providers: [PosTerminalService],
 })
 export class PosTerminalModule {}
