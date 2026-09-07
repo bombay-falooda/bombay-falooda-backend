@@ -173,7 +173,7 @@ export class PosTerminalService {
       data: {
         outletId: session.outletId,
         posDeviceId: session.posDeviceId,
-        billNumber: await this.generateBillNumber(),
+        billNumber: await this.generateBillNumber(session),
         status: BillStatus.HELD,
         customerName: this.clean(dto.customerName),
         customerPhone: this.clean(dto.customerPhone),
@@ -487,7 +487,7 @@ export class PosTerminalService {
         outletId: session.outletId,
         posDeviceId: session.posDeviceId,
         orderId: order.id,
-        billNumber: await this.generateBillNumber(),
+        billNumber: await this.generateBillNumber(session),
         status: BillStatus.HELD,
         customerName: this.clean(order.customerName),
         customerPhone: this.clean(order.customerPhone),
@@ -1177,21 +1177,17 @@ export class PosTerminalService {
     };
   }
 
-  private async generateBillNumber() {
-    const today = new Date();
-    const stamp = [
-      today.getFullYear(),
-      String(today.getMonth() + 1).padStart(2, '0'),
-      String(today.getDate()).padStart(2, '0'),
-    ].join('');
+  private async generateBillNumber(session: PosSession) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
     const count = await this.prisma.bill.count({
       where: {
-        createdAt: {
-          gte: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
-        },
+        createdAt: { gte: startOfDay },
+        outletId: session.outletId,
       },
     });
-    return `BF-${stamp}-${String(count + 1).padStart(4, '0')}`;
+    return `BILL-${count + 1}`;
   }
 
   private sum(values: Array<number | Prisma.Decimal>) {
