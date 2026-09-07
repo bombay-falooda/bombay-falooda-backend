@@ -237,11 +237,23 @@ export class PosTerminalService {
       throw new BadRequestException('No new bill items are pending for KOT');
     }
 
-    const kotCount = await this.prisma.kotTicket.count({ where: { billId } });
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const todayKotCount = await this.prisma.kotTicket.count({
+      where: {
+        createdAt: { gte: startOfDay },
+        bill: { outletId: session.outletId },
+      },
+    });
+
+    const kotSeq = todayKotCount + 1;
+    const kotNumber = `KOT-${kotSeq}`;
+
     const kot = await this.prisma.kotTicket.create({
       data: {
         billId,
-        kotNumber: `${bill.billNumber}-KOT-${kotCount + 1}`,
+        kotNumber,
         notes: this.clean(dto.notes),
         printedAt: new Date(),
         items: {
