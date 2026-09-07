@@ -1217,20 +1217,99 @@ export class PosTerminalService {
   }
 
   async processOnlineWebhookOrder(data: { source: string; rawPayload: any }) {
-    const outlet = await this.prisma.outlet.findFirst();
+    const payload = data.rawPayload || {};
+    const storeId =
+      payload.store_id ||
+      payload.restaurant_id ||
+      payload.res_id ||
+      payload.order?.details?.store_id ||
+      payload.order?.store_id ||
+      payload.outlet_code;
+
+    let outlet = storeId
+      ? await this.prisma.outlet.findFirst({
+          where: { OR: [{ id: storeId }, { code: storeId }] },
+        })
+      : null;
+
+    if (!outlet) {
+      outlet = await this.prisma.outlet.findFirst();
+    }
+
     if (!outlet) {
       return { status: 'error', message: 'No active outlet found for online order routing' };
     }
 
-    const payload = data.rawPayload || {};
-    const customerName = payload.customer_name || payload.order?.details?.customer?.name || 'Online Customer';
-    const customerPhone = payload.customer_phone || payload.order?.details?.customer?.phone || '9876543210';
-    const totalAmount = Number(payload.total_amount || payload.order?.details?.order_total || 0);
+    const customerName =
+      payload.customer_name ||
+      payload.order?.details?.customer?.name ||
+      `${data.source} Customer`;
+    const customerPhone =
+      payload.customer_phone ||
+      payload.order?.details?.customer?.phone ||
+      '9876543210';
+    const totalAmount = Number(
+      payload.total_amount || payload.order?.details?.order_total || payload.amount || 0,
+    );
+
+    const rawItems: any[] =
+      payload.items ||
+      payload.order?.items ||
+      payload.order?.details?.items ||
+      [];
+
+    const fallbackMenuItem = await this.prisma.menuItem.findFirst();
+
+    const orderItemsData: Array<{
+      itemId: string;
+      name: string;
+      quantity: number;
+      unitPrice: number;
+      total: number;
+      notes?: string;
+    }> = [];
+
+    for (const rawItem of rawItems) {
+      const itemName = rawItem.name || rawItem.title || rawItem.item_name || 'Falooda Item';
+      const qty = Number(rawItem.quantity || rawItem.qty || 1);
+      const unitPrice = Number(rawItem.unit_price || rawItem.price || 0);
+      const itemTotal = unitPrice * qty;
+
+      const matchedMenuItem = await this.prisma.menuItem.findFirst({
+        where: { name: { contains: itemName, mode: 'insensitive' } },
+      });
+
+      orderItemsData.push({
+        itemId: matchedMenuItem?.id || fallbackMenuItem?.id || 'default-item',
+        name: itemName,
+        quantity: qty,
+        unitPrice,
+        total: itemTotal,
+        notes: rawItem.instructions || rawItem.notes || undefined,
+      });
+    }
+
+    if (orderItemsData.length === 0 && fallbackMenuItem) {
+      orderItemsData.push({
+        itemId: fallbackMenuItem.id,
+        name: `${data.source} Online Order`,
+        quantity: 1,
+        unitPrice: totalAmount,
+        total: totalAmount,
+      });
+    }
+
+    const sourceEnum =
+      data.source === 'ZOMATO'
+        ? OrderSource.ZOMATO
+        : data.source === 'SWIGGY'
+          ? OrderSource.SWIGGY
+          : OrderSource.EZCATER;
 
     const order = await this.prisma.order.create({
       data: {
         outletId: outlet.id,
-        source: (data.source === 'ZOMATO' ? OrderSource.ZOMATO : data.source === 'SWIGGY' ? OrderSource.SWIGGY : OrderSource.EZCATER) as any,
+        source: sourceEnum,
         type: OrderType.DELIVERY,
         status: OrderStatus.ACCEPTED,
         customerName,
@@ -1239,22 +1318,106 @@ export class PosTerminalService {
         subtotal: totalAmount,
         taxAmount: 0,
         discount: 0,
-        notes: `Online Order via ${data.source}`,
+        notes: `Auto-Accepted Online Order via ${data.source} (${payload.order_id || payload.order?.details?.order_id || 'ID-' + Date.now()})`,
+        items: {
+          create: orderItemsData.map((item) => ({
+            itemId: item.itemId,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total,
+            notes: item.notes,
+          })),
+        },
+      },
+      include: { items: true },
+    });
+
+    const posDevice = await this.prisma.posDevice.findFirst({
+      where: { outletId: outlet.id },
+    });
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const billCount = await this.prisma.bill.count({
+      where: {
+        createdAt: { gte: startOfDay },
+        outletId: outlet.id,
+      },
+    });
+
+    const billNumber = `BILL-${billCount + 1}`;
+
+    const bill = await this.prisma.bill.create({
+      data: {
+        outletId: outlet.id,
+        posDeviceId: posDevice?.id || 'pos-default',
+        orderId: order.id,
+        billNumber,
+        status: BillStatus.HELD,
+        customerName,
+        customerPhone,
+        notes: order.notes,
+        subtotal: totalAmount,
+        taxAmount: 0,
+        discount: 0,
+        total: totalAmount,
+        items: {
+          create: orderItemsData.map((item) => ({
+            itemId: item.itemId,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total,
+            notes: item.notes,
+          })),
+        },
+      },
+      include: this.billInclude(),
+    });
+
+    const kotCount = await this.prisma.kotTicket.count({
+      where: {
+        createdAt: { gte: startOfDay },
+        bill: { outletId: outlet.id },
+      },
+    });
+
+    const kot = await this.prisma.kotTicket.create({
+      data: {
+        billId: bill.id,
+        kotNumber: `KOT-${kotCount + 1}`,
+        notes: order.notes,
+        printedAt: new Date(),
+        items: {
+          create: bill.items.map((item) => ({
+            billItemId: item.id,
+            quantity: item.quantity,
+            notes: item.notes,
+          })),
+        },
+      },
+      include: {
+        items: { include: { billItem: true } },
+        bill: { include: { outlet: true, posDevice: true } },
       },
     });
 
     void this.notificationsService.createNotification({
       recipientRole: 'FRANCHISE_OWNER',
       outletId: outlet.id,
-      title: `🛵 New ${data.source} Order Received!`,
-      message: `Order #${order.id.slice(-6)} (${customerName}) for INR ${totalAmount}`,
-      type: 'INFO',
+      title: `🛵 New ${data.source} Order Auto-Accepted!`,
+      message: `Order #${order.id.slice(-6)} (${customerName}) for ₹${totalAmount} — KOT #${kot.kotNumber} generated for kitchen.`,
+      type: 'SUCCESS',
     });
 
     return {
       status: 'success',
       orderId: order.id,
-      message: `Online order from ${data.source} received & routed to POS Live Orders`,
+      billId: bill.id,
+      kotNumber: kot.kotNumber,
+      message: `Online order from ${data.source} auto-accepted & routed to outlet ${outlet.name}`,
     };
   }
 
