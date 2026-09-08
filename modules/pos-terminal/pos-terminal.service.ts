@@ -167,34 +167,46 @@ export class PosTerminalService {
       throw new BadRequestException('At least one item is required');
     }
 
-    const lines = await this.prepareBillItems(session.outletId, dto.items);
-    const subtotal = this.sum(lines.map((line) => line.total));
-    const bill = await this.prisma.bill.create({
-      data: {
-        outletId: session.outletId,
-        posDeviceId: session.posDeviceId,
-        billNumber: await this.generateBillNumber(session),
-        status: BillStatus.HELD,
-        customerName: this.clean(dto.customerName),
-        customerPhone: this.clean(dto.customerPhone),
-        customerEmail: this.clean(dto.customerEmail),
-        notes: this.clean(dto.notes),
-        notePrintEnabled: dto.notePrintEnabled ?? true,
-        subtotal,
-        taxAmount: 0,
-        discount: 0,
-        total: subtotal,
-        items: { create: lines },
-      },
-      include: this.billInclude(),
-    });
+    try {
+      const lines = await this.prepareBillItems(session.outletId, dto.items);
+      const subtotal = this.sum(lines.map((line) => line.total));
+      const billNumber = await this.generateBillNumber(session);
 
-    await this.log('POS_BILL_CREATED', 'Bill', bill.id, session, {
-      billNumber: bill.billNumber,
-      itemCount: dto.items.length,
-    });
+      const bill = await this.prisma.bill.create({
+        data: {
+          outletId: session.outletId,
+          posDeviceId: session.posDeviceId,
+          billNumber,
+          status: BillStatus.HELD,
+          customerName: this.clean(dto.customerName),
+          customerPhone: this.clean(dto.customerPhone),
+          customerEmail: this.clean(dto.customerEmail),
+          notes: this.clean(dto.notes),
+          notePrintEnabled: dto.notePrintEnabled ?? true,
+          subtotal,
+          taxAmount: 0,
+          discount: 0,
+          total: subtotal,
+          items: { create: lines },
+        },
+        include: this.billInclude(),
+      });
 
-    return bill;
+      await this.log('POS_BILL_CREATED', 'Bill', bill.id, session, {
+        billNumber: bill.billNumber,
+        itemCount: dto.items.length,
+      });
+
+      return bill;
+    } catch (error) {
+      console.error('Error creating POS bill:', error);
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Failed to create bill in POS database',
+      );
+    }
   }
 
   async addItems(session: PosSession, billId: string, dto: AddBillItemsDto) {
@@ -1207,13 +1219,28 @@ export class PosTerminalService {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const count = await this.prisma.bill.count({
+    let count = await this.prisma.bill.count({
       where: {
         createdAt: { gte: startOfDay },
         outletId: session.outletId,
       },
     });
-    return `BILL-${count + 1}`;
+
+    let billNumber = `BILL-${count + 1}`;
+    let attempts = 0;
+    while (attempts < 100) {
+      const existing = await this.prisma.bill.findUnique({
+        where: { billNumber },
+      });
+      if (!existing) {
+        return billNumber;
+      }
+      count++;
+      billNumber = `BILL-${count + 1}`;
+      attempts++;
+    }
+
+    return `BILL-${Date.now()}`;
   }
 
   private sum(values: Array<number | Prisma.Decimal>) {
