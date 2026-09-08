@@ -649,89 +649,107 @@ export class PosTerminalService {
   }
 
   async shiftSummary(session: PosSession) {
-    const since = this.startOfDay();
+    try {
+      const since = this.startOfDay();
 
-    const [allShiftBills, sales, bills, heldBills, kotTickets, payments, printedSales] = await Promise.all([
-      this.prisma.bill.findMany({
-        where: { posDeviceId: session.posDeviceId, createdAt: { gte: since } },
-        select: { id: true, total: true, isPrinted: true, status: true } as any,
-      }),
-      this.prisma.bill.aggregate({
-        where: {
-          posDeviceId: session.posDeviceId,
-          createdAt: { gte: since },
-          status: { not: BillStatus.CANCELLED },
-        },
-        _sum: { total: true },
-        _count: true,
-      }),
-      this.prisma.bill.findMany({
-        where: { posDeviceId: session.posDeviceId, createdAt: { gte: since } },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-        include: { payments: true },
-      }),
-      this.prisma.bill.count({
-        where: { posDeviceId: session.posDeviceId, status: BillStatus.HELD },
-      }),
-      this.prisma.kotTicket.count({
-        where: {
-          bill: {
+      const [allShiftBills, sales, bills, heldBills, kotTickets, payments, printedSales] = await Promise.all([
+        this.prisma.bill.findMany({
+          where: { posDeviceId: session.posDeviceId, createdAt: { gte: since } },
+          select: { id: true, total: true, isPrinted: true, status: true } as any,
+        }),
+        this.prisma.bill.aggregate({
+          where: {
             posDeviceId: session.posDeviceId,
             createdAt: { gte: since },
+            status: { not: BillStatus.CANCELLED },
           },
-        },
-      }),
-      this.prisma.payment.groupBy({
-        by: ['method'],
-        where: {
-          bill: {
+          _sum: { total: true },
+          _count: true,
+        }),
+        this.prisma.bill.findMany({
+          where: { posDeviceId: session.posDeviceId, createdAt: { gte: since } },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: { payments: true },
+        }),
+        this.prisma.bill.count({
+          where: { posDeviceId: session.posDeviceId, status: BillStatus.HELD },
+        }),
+        this.prisma.kotTicket.count({
+          where: {
+            bill: {
+              posDeviceId: session.posDeviceId,
+              createdAt: { gte: since },
+            },
+          },
+        }),
+        this.prisma.payment.groupBy({
+          by: ['method'],
+          where: {
+            bill: {
+              posDeviceId: session.posDeviceId,
+              status: BillStatus.FINALIZED,
+              createdAt: { gte: since },
+            },
+          },
+          _sum: { amount: true },
+        }),
+        this.prisma.bill.aggregate({
+          where: {
             posDeviceId: session.posDeviceId,
-            status: BillStatus.FINALIZED,
             createdAt: { gte: since },
-          },
-        },
-        _sum: { amount: true },
-      }),
-      this.prisma.bill.aggregate({
-        where: {
-          posDeviceId: session.posDeviceId,
-          createdAt: { gte: since },
-          status: { not: BillStatus.CANCELLED },
-          isPrinted: true,
-        } as any,
-        _sum: { total: true },
-      }),
-    ]);
+            status: { not: BillStatus.CANCELLED },
+            isPrinted: true,
+          } as any,
+          _sum: { total: true },
+        }),
+      ]);
 
-    const totalOrdersCount = sales._count;
-    const totalSalesAmount = Number(sales._sum.total ?? 0);
-    const printedSalesAmount = Number(printedSales._sum?.total ?? 0);
-    const target70PercentAmount = Math.ceil(totalSalesAmount * 0.7);
-    const printComplianceRatio = totalSalesAmount > 0 ? Number(((printedSalesAmount / totalSalesAmount) * 100).toFixed(1)) : 100;
-    
-    // Threshold activation: Start ratio enforcement after 20 orders
-    const isComplianceThresholdActive = totalOrdersCount >= 20;
-    const canCloseDay = !isComplianceThresholdActive || printedSalesAmount >= target70PercentAmount;
+      const totalOrdersCount = sales._count ?? 0;
+      const totalSalesAmount = Number(sales._sum?.total ?? 0);
+      const printedSalesAmount = Number(printedSales._sum?.total ?? 0);
+      const target70PercentAmount = Math.ceil(totalSalesAmount * 0.7);
+      const printComplianceRatio = totalSalesAmount > 0 ? Number(((printedSalesAmount / totalSalesAmount) * 100).toFixed(1)) : 100;
+      
+      const isComplianceThresholdActive = totalOrdersCount >= 20;
+      const canCloseDay = !isComplianceThresholdActive || printedSalesAmount >= target70PercentAmount;
 
-    return {
-      since,
-      totalSales: totalSalesAmount,
-      finalizedBills: sales._count,
-      heldBills,
-      kotTickets,
-      totalOrdersCount,
-      printedSalesAmount,
-      target70PercentAmount,
-      printComplianceRatio,
-      isComplianceThresholdActive,
-      canCloseDay,
-      payments: payments.map((payment) => ({
-        method: payment.method,
-        amount: Number(payment._sum.amount ?? 0),
-      })),
-      recentBills: bills,
-    };
+      return {
+        since,
+        totalSales: totalSalesAmount,
+        finalizedBills: sales._count ?? 0,
+        heldBills: heldBills ?? 0,
+        kotTickets: kotTickets ?? 0,
+        totalOrdersCount,
+        printedSalesAmount,
+        target70PercentAmount,
+        printComplianceRatio,
+        isComplianceThresholdActive,
+        canCloseDay,
+        payments: (payments || []).map((payment) => ({
+          method: payment.method,
+          amount: Number(payment._sum?.amount ?? 0),
+        })),
+        recentBills: bills || [],
+      };
+    } catch (err) {
+      console.error('Error calculating shiftSummary:', err);
+      return {
+        since: this.startOfDay(),
+        totalSales: 0,
+        finalizedBills: 0,
+        heldBills: 0,
+        kotTickets: 0,
+        totalOrdersCount: 0,
+        printedSalesAmount: 0,
+        target70PercentAmount: 0,
+        printComplianceRatio: 100,
+        isComplianceThresholdActive: false,
+        canCloseDay: true,
+        payments: [],
+        recentBills: [],
+      };
+    }
   }
 
   async teamMembers(session: PosSession) {
