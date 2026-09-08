@@ -36,7 +36,8 @@ export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async superadminDashboard(filters: DashboardFilters) {
-    const since = this.dateFromRange(filters.range);
+    const since = await this.dateFromRange(filters.range, filters.outletId);
+
     const source = this.enumValue(OrderSource, filters.source);
     const type = this.enumValue(OrderType, filters.type);
 
@@ -283,7 +284,7 @@ export class ReportsService {
     return bills.reduce((total, bill) => total + Number(bill.total), 0);
   }
 
-  private dateFromRange(range: string, isFranchiseOwner = false) {
+  private async dateFromRange(range: string, outletId?: string): Promise<Date> {
     const now = new Date();
     const hours: Record<string, number> = {
       '1h': 1,
@@ -296,14 +297,23 @@ export class ReportsService {
       '1y': 24 * 365,
     };
 
-    let selectedHours = hours[range] || 24;
+    // For "today" range with a specific outlet — use the business day session start
+    if (range === '1d' && outletId) {
+      const latestDay = await this.prisma.outletBusinessDay.findFirst({
+        where: { outletId, status: { in: ['OPEN', 'CLOSED'] } },
+        orderBy: { startedAt: 'desc' },
+        select: { startedAt: true },
+      });
 
-    if (isFranchiseOwner && selectedHours > 24 * 30) {
-      selectedHours = 24 * 30;
+      if (latestDay) {
+        return latestDay.startedAt;
+      }
     }
 
+    const selectedHours = hours[range] ?? 24;
     return new Date(now.getTime() - selectedHours * 60 * 60 * 1000);
   }
+
 
   private enumValue<T extends Record<string, string>>(
     source: T,

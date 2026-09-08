@@ -90,6 +90,11 @@ enum MenuSetupStatus {
   LOCKED
 }
 
+enum BusinessDayStatus {
+  OPEN
+  CLOSED
+}
+
 model User {
   id           String     @id @default(cuid())
   name         String
@@ -214,6 +219,7 @@ model Outlet {
   orderRoutes     OrderRoute[]
   orders          Order[]
   bills           Bill[]
+  businessDays    OutletBusinessDay[]
 
   @@index([franchiseId])
   @@index([status])
@@ -244,6 +250,7 @@ model PosDevice {
   orderRoutes  OrderRoute[]
   orders       Order[]
   bills        Bill[]
+  businessDays OutletBusinessDay[]
 
   @@index([outletId])
   @@index([status])
@@ -425,6 +432,7 @@ model Bill {
   cancelledAt DateTime?
   cancelledById String?
   cancelReason String?
+  businessDayId String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -432,6 +440,7 @@ model Bill {
   posDevice PosDevice   @relation(fields: [posDeviceId], references: [id])
   order     Order?      @relation(fields: [orderId], references: [id])
   cancelledBy User?     @relation("BillCancelledBy", fields: [cancelledById], references: [id])
+  businessDay OutletBusinessDay? @relation(fields: [businessDayId], references: [id])
   items     BillItem[]
   kotTickets KotTicket[]
   payments  Payment[]
@@ -439,6 +448,7 @@ model Bill {
   @@index([outletId])
   @@index([posDeviceId])
   @@index([cancelledById])
+  @@index([businessDayId])
   @@index([status])
   @@index([createdAt])
 }
@@ -596,3 +606,22 @@ model NotificationLog {
   @@index([createdAt])
 }
 
+model OutletBusinessDay {
+  id          String            @id @default(cuid())
+  outletId    String
+  posDeviceId String
+  status      BusinessDayStatus @default(OPEN)
+  startedAt   DateTime          @default(now())
+  endedAt     DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  outlet    Outlet    @relation(fields: [outletId], references: [id])
+  posDevice PosDevice @relation(fields: [posDeviceId], references: [id])
+  bills     Bill[]
+
+  @@index([outletId])
+  @@index([posDeviceId])
+  @@index([status])
+  @@index([startedAt])
+}

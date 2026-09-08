@@ -262,7 +262,7 @@ export class FranchisePortalService {
       throw new NotFoundException('POS device not found');
     }
 
-    const since = range !== 'all' ? this.dateFromRange(range) : undefined;
+    const since = range !== 'all' ? await this.dateFromRange(range, device.outlet.id) : undefined;
     const billWhere: Prisma.BillWhereInput = {
       posDeviceId,
       status: BillStatus.FINALIZED,
@@ -896,7 +896,7 @@ export class FranchisePortalService {
   ) {
     const id = this.requireFranchiseId(franchiseId);
     await this.assertFranchisePermission(id, 'canViewReports');
-    const since = this.dateFromRange(range);
+    const since = await this.dateFromRange(range, outletId);
     const billWhere: Prisma.BillWhereInput = {
       outlet: { franchiseId: id },
       status: BillStatus.FINALIZED,
@@ -1246,8 +1246,21 @@ export class FranchisePortalService {
     return date;
   }
 
-  private dateFromRange(range: string) {
+  private async dateFromRange(range: string, outletId?: string): Promise<Date> {
     const date = new Date();
+
+    // For "day" range with a specific outlet — use the business day session start
+    if (range === 'day' && outletId) {
+      const latestDay = await this.prisma.outletBusinessDay.findFirst({
+        where: { outletId, status: { in: ['OPEN', 'CLOSED'] } },
+        orderBy: { startedAt: 'desc' },
+        select: { startedAt: true },
+      });
+      if (latestDay) return latestDay.startedAt;
+      // Fall through to midnight if no business day found
+      date.setHours(0, 0, 0, 0);
+      return date;
+    }
 
     if (range === 'hour') {
       date.setHours(date.getHours() - 1);

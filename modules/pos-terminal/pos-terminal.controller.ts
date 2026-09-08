@@ -26,6 +26,16 @@ export class PosTerminalController {
     return this.posTerminalService.menu(session);
   }
 
+  // ─── Business Day ──────────────────────────────────────────────────────────
+
+  @Get('day/current')
+  getDayStatus(@CurrentPosSession() session: PosSession) {
+    return this.posTerminalService.currentDay(session);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+
+
   @Get('bills/held')
   heldBills(@CurrentPosSession() session: PosSession) {
     return this.posTerminalService.heldBills(session);

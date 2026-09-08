@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import {
   BillStatus,
+  BusinessDayStatus,
   OrderSource,
   OrderStatus,
   OrderType,
@@ -167,6 +168,18 @@ export class PosTerminalService {
       throw new BadRequestException('At least one item is required');
     }
 
+    // Enforce that a business day must be started before billing
+    const activeDay = await this.prisma.outletBusinessDay.findFirst({
+      where: { outletId: session.outletId, status: BusinessDayStatus.OPEN },
+      orderBy: { startedAt: 'desc' },
+    });
+
+    if (!activeDay) {
+      throw new BadRequestException(
+        'No active business day. Please press "Start Day" before creating bills.',
+      );
+    }
+
     try {
       const lines = await this.prepareBillItems(session.outletId, dto.items);
       const subtotal = this.sum(lines.map((line) => line.total));
@@ -187,6 +200,7 @@ export class PosTerminalService {
           taxAmount: 0,
           discount: 0,
           total: subtotal,
+          businessDayId: activeDay.id,
           items: { create: lines },
         },
         include: this.billInclude(),
@@ -195,6 +209,7 @@ export class PosTerminalService {
       await this.log('POS_BILL_CREATED', 'Bill', bill.id, session, {
         billNumber: bill.billNumber,
         itemCount: dto.items.length,
+        businessDayId: activeDay.id,
       });
 
       return bill;
@@ -671,7 +686,13 @@ export class PosTerminalService {
 
   async shiftSummary(session: PosSession) {
     try {
-      const since = this.startOfDay();
+      // Use business day start time if available, fall back to calendar midnight
+      const activeDay = await this.prisma.outletBusinessDay.findFirst({
+        where: { outletId: session.outletId, status: BusinessDayStatus.OPEN },
+        orderBy: { startedAt: 'desc' },
+        select: { startedAt: true },
+      });
+      const since = activeDay?.startedAt ?? this.startOfDay();
 
       const [allShiftBills, sales, bills, heldBills, kotTickets, payments, printedSales] = await Promise.all([
         this.prisma.bill.findMany({
@@ -801,7 +822,28 @@ export class PosTerminalService {
   }
 
   async startDay(session: PosSession, openingFloat: number) {
-    await this.log('POS_DAY_STARTED', 'PosDevice', session.posDeviceId, session, { openingFloat });
+    // Check for existing open business day for this outlet
+    const existing = await this.prisma.outletBusinessDay.findFirst({
+      where: { outletId: session.outletId, status: BusinessDayStatus.OPEN },
+    });
+
+    if (existing) {
+      throw new BadRequestException(
+        'A business day is already open for this outlet. Please end the current day first.',
+      );
+    }
+
+    // Create new business day record
+    const businessDay = await this.prisma.outletBusinessDay.create({
+      data: {
+        outletId: session.outletId,
+        posDeviceId: session.posDeviceId,
+        status: BusinessDayStatus.OPEN,
+        startedAt: new Date(),
+      },
+    });
+
+    await this.log('POS_DAY_STARTED', 'OutletBusinessDay', businessDay.id, session, { openingFloat, startedAt: businessDay.startedAt });
 
     void this.notificationsService.createNotification({
       recipientRole: 'FRANCHISE_OWNER',
@@ -823,18 +865,32 @@ export class PosTerminalService {
       success: true,
       status: 'OPEN',
       openingFloat,
-      startedAt: new Date().toISOString(),
+      businessDayId: businessDay.id,
+      startedAt: businessDay.startedAt.toISOString(),
       message: 'Shift / Day Started Successfully',
     };
   }
 
   async endDay(session: PosSession, closingNotes?: string) {
     const summary = await this.shiftSummary(session);
-    
+
     if (!summary.canCloseDay) {
       throw new BadRequestException(
         `Cannot close register! GST policy requires minimum 70% printed bill sales compliance. Current printed: ₹${summary.printedSalesAmount} (${summary.printComplianceRatio}%). Required target: ₹${summary.target70PercentAmount}. Please select unprinted bills to print.`
       );
+    }
+
+    // Close the active business day record
+    const activeDay = await this.prisma.outletBusinessDay.findFirst({
+      where: { outletId: session.outletId, status: BusinessDayStatus.OPEN },
+      orderBy: { startedAt: 'desc' },
+    });
+
+    if (activeDay) {
+      await this.prisma.outletBusinessDay.update({
+        where: { id: activeDay.id },
+        data: { status: BusinessDayStatus.CLOSED, endedAt: new Date() },
+      });
     }
 
     await this.log('POS_DAY_ENDED', 'PosDevice', session.posDeviceId, session, { closingNotes, summary });
@@ -1438,6 +1494,14 @@ export class PosTerminalService {
             notes: item.notes,
           })),
         },
+        // Link to current open business day if one exists for this outlet
+        businessDayId: await this.prisma.outletBusinessDay
+          .findFirst({
+            where: { outletId: outlet.id, status: BusinessDayStatus.OPEN },
+            orderBy: { startedAt: 'desc' },
+            select: { id: true },
+          })
+          .then((d) => d?.id ?? null),
       },
       include: this.billInclude(),
     });
@@ -1485,6 +1549,34 @@ export class PosTerminalService {
       message: `Online order from ${data.source} auto-accepted & routed to outlet ${outlet.name}`,
     };
   }
+
+  // ─── Business Day Status ─────────────────────────────────────────────────────
+
+  async currentDay(session: PosSession) {
+    const day = await this.prisma.outletBusinessDay.findFirst({
+      where: { outletId: session.outletId, status: BusinessDayStatus.OPEN },
+      orderBy: { startedAt: 'desc' },
+      include: {
+        _count: { select: { bills: true } },
+      },
+    });
+
+    if (!day) return { active: false, businessDay: null };
+
+    // Auto-close days that have been open for more than 30 hours
+    const hoursOpen = (Date.now() - day.startedAt.getTime()) / (1000 * 60 * 60);
+    if (hoursOpen > 30) {
+      await this.prisma.outletBusinessDay.update({
+        where: { id: day.id },
+        data: { status: BusinessDayStatus.CLOSED, endedAt: new Date() },
+      });
+      return { active: false, businessDay: null, autoClosedAt: new Date() };
+    }
+
+    return { active: true, businessDay: day };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
 
   private log(
     action: string,
