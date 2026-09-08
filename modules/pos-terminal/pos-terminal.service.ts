@@ -1393,14 +1393,26 @@ export class PosTerminalService {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const billCount = await this.prisma.bill.count({
+    let billCount = await this.prisma.bill.count({
       where: {
         createdAt: { gte: startOfDay },
         outletId: outlet.id,
       },
     });
 
-    const billNumber = `BILL-${billCount + 1}`;
+    let billNumber = `BILL-${billCount + 1}`;
+    let billAttempts = 0;
+    while (billAttempts < 100) {
+      const existing = await this.prisma.bill.findUnique({
+        where: { billNumber },
+      });
+      if (!existing) {
+        break;
+      }
+      billCount++;
+      billNumber = `BILL-${billCount + 1}`;
+      billAttempts++;
+    }
 
     const bill = await this.prisma.bill.create({
       data: {
