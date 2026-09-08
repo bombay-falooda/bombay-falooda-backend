@@ -168,16 +168,25 @@ export class PosTerminalService {
       throw new BadRequestException('At least one item is required');
     }
 
-    // Enforce that a business day must be started before billing
-    const activeDay = await this.prisma.outletBusinessDay.findFirst({
+    // Auto-create or attach to active business day for this outlet
+    let activeDay = await this.prisma.outletBusinessDay.findFirst({
       where: { outletId: session.outletId, status: BusinessDayStatus.OPEN },
       orderBy: { startedAt: 'desc' },
     });
 
     if (!activeDay) {
-      throw new BadRequestException(
-        'No active business day. Please press "Start Day" before creating bills.',
-      );
+      activeDay = await this.prisma.outletBusinessDay.create({
+        data: {
+          outletId: session.outletId,
+          posDeviceId: session.posDeviceId,
+          status: BusinessDayStatus.OPEN,
+          startedAt: new Date(),
+        },
+      });
+      await this.log('POS_DAY_AUTO_STARTED', 'OutletBusinessDay', activeDay.id, session, {
+        reason: 'Auto-initialized on first bill creation',
+        startedAt: activeDay.startedAt,
+      });
     }
 
     try {
@@ -828,9 +837,14 @@ export class PosTerminalService {
     });
 
     if (existing) {
-      throw new BadRequestException(
-        'A business day is already open for this outlet. Please end the current day first.',
-      );
+      return {
+        success: true,
+        status: 'OPEN',
+        openingFloat,
+        businessDayId: existing.id,
+        startedAt: existing.startedAt.toISOString(),
+        message: 'Business Day is already active and open.',
+      };
     }
 
     // Create new business day record
