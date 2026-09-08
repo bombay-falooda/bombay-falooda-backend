@@ -225,16 +225,21 @@ export class PosTerminalService {
   }
 
   async createKot(session: PosSession, billId: string, dto: CreateKotDto) {
-    const bill = await this.findHeldBill(session, billId);
+    const bill = await this.findBill(session, billId);
     const printedItemIds = new Set(
       bill.kotTickets.flatMap((ticket) =>
         ticket.items.map((item) => item.billItemId),
       ),
     );
-    const newItems = bill.items.filter((item) => !printedItemIds.has(item.id));
+    let newItems = bill.items.filter((item) => !printedItemIds.has(item.id));
+
+    // Fallback for re-print KOT: If all items were printed in a previous KOT, use all items
+    if (!newItems.length) {
+      newItems = bill.items;
+    }
 
     if (!newItems.length) {
-      throw new BadRequestException('No new bill items are pending for KOT');
+      throw new BadRequestException('No items available in this bill for KOT');
     }
 
     const startOfDay = new Date();
@@ -287,7 +292,11 @@ export class PosTerminalService {
   }
 
   async finalizeBill(session: PosSession, billId: string, dto: FinalizeBillDto) {
-    const bill = await this.findHeldBill(session, billId);
+    const bill = await this.findBill(session, billId);
+    if (bill.status === BillStatus.FINALIZED) {
+      return bill;
+    }
+
     const discount = new Prisma.Decimal(dto.discount ?? 0);
     if (discount.greaterThan(0)) {
       await this.assertPermission(
@@ -1146,7 +1155,6 @@ export class PosTerminalService {
       where: {
         id: billId,
         outletId: session.outletId,
-        posDeviceId: session.posDeviceId,
       },
       include: this.billInclude(),
     });
