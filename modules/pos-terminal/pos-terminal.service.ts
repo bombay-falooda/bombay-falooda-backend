@@ -26,6 +26,7 @@ import { CreateKotDto } from './dto/create-kot.dto';
 import { FinalizeBillDto } from './dto/finalize-bill.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { ZomatoIntegrationService } from './zomato-integration.service';
 
 @Injectable()
 export class PosTerminalService {
@@ -33,6 +34,7 @@ export class PosTerminalService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly notificationsService: NotificationsService,
+    private readonly zomatoService: ZomatoIntegrationService,
   ) {}
 
   async me(session: PosSession) {
@@ -1562,6 +1564,181 @@ export class PosTerminalService {
       kotNumber: kot.kotNumber,
       message: `Online order from ${data.source} auto-accepted & routed to outlet ${outlet.name}`,
     };
+  }
+
+  /**
+   * Universal Zomato Webhook Dispatcher:
+   * Safely discriminates event type from single or mixed webhook payload
+   */
+  async handleZomatoWebhookUniversal(payload: any) {
+    const eventType = (payload?.event_type || payload?.action || payload?.event || '').toUpperCase();
+
+    if (eventType.includes('RIDER') || payload?.rider_details || payload?.delivery_partner) {
+      return this.handleZomatoRiderStatusUpdate(payload);
+    }
+    if (eventType.includes('CANCEL') || payload?.cancellation_reason || payload?.mac) {
+      return this.handleZomatoCancellation(payload);
+    }
+    if (eventType.includes('STATUS') || payload?.order_status === 'REJECTED' || payload?.order_status === 'TIMEOUT') {
+      return this.handleZomatoOrderStatusUpdate(payload);
+    }
+    if (eventType.includes('COMPLAINT') || payload?.complaint) {
+      return this.handleZomatoComplaint(payload);
+    }
+    if (eventType.includes('RATING') || payload?.rating !== undefined) {
+      return this.handleZomatoRating(payload);
+    }
+
+    // Default: New Order Relay
+    return this.processOnlineWebhookOrder({
+      source: 'ZOMATO',
+      rawPayload: payload,
+    });
+  }
+
+  /**
+   * Zomato Order Status Update Webhook (Rejections, Timeouts, Status Sync)
+   * Doc: /online-ordering/v1/order-status/webhook
+   */
+  async handleZomatoOrderStatusUpdate(payload: any) {
+    const orderId = payload?.order_id || payload?.order?.details?.order_id || 'UNKNOWN';
+    const status = payload?.order_status || payload?.status || 'UPDATED';
+    const reason = payload?.reason || payload?.rejection_reason || 'Status updated via Zomato';
+
+    const order = await this.prisma.order.findFirst({
+      where: { notes: { contains: orderId } },
+      include: { outlet: true },
+    });
+
+    if (order) {
+      if (status === 'REJECTED' || status === 'CANCELLED' || status === 'TIMEOUT') {
+        await this.prisma.order.update({
+          where: { id: order.id },
+          data: {
+            status: OrderStatus.CANCELLED,
+            notes: `${order.notes || ''} | [Zomato Event]: ${status} (${reason})`,
+          },
+        });
+      }
+
+      void this.notificationsService.createNotification({
+        recipientRole: 'FRANCHISE_OWNER',
+        outletId: order.outletId,
+        title: `⚠️ Zomato Order #${orderId} ${status}`,
+        message: `Reason: ${reason}`,
+        type: status === 'REJECTED' || status === 'CANCELLED' ? 'WARNING' : 'INFO',
+      });
+    }
+
+    return { status: 'success', message: `Order status for ${orderId} updated to ${status}` };
+  }
+
+  /**
+   * Zomato Delivery Partner Status Update Webhook
+   * Doc: /online-ordering/v1/delivery-partner-status/webhook
+   */
+  async handleZomatoRiderStatusUpdate(payload: any) {
+    const orderId = payload?.order_id || payload?.order?.details?.order_id || 'UNKNOWN';
+    const riderName = payload?.rider_details?.name || payload?.delivery_partner?.name || 'Zomato Delivery Partner';
+    const riderPhone = payload?.rider_details?.phone || payload?.delivery_partner?.phone || '';
+    const riderStatus = payload?.rider_status || payload?.status || 'ASSIGNED'; // ASSIGNED, ARRIVED_AT_STORE, PICKED_UP
+
+    const order = await this.prisma.order.findFirst({
+      where: { notes: { contains: orderId } },
+    });
+
+    if (order) {
+      void this.notificationsService.createNotification({
+        recipientRole: 'FRANCHISE_OWNER',
+        outletId: order.outletId,
+        title: `🛵 Zomato Rider: ${riderStatus.replace(/_/g, ' ')}`,
+        message: `Order #${orderId} - Rider ${riderName} ${riderPhone ? '(' + riderPhone + ')' : ''}`,
+        type: 'INFO',
+      });
+    }
+
+    return { status: 'success', message: `Rider update for order ${orderId} recorded` };
+  }
+
+  /**
+   * Zomato Merchant Agreed Cancellation (MAC) Relay Webhook
+   * Doc: /online-ordering/v1/mac/webhook
+   */
+  async handleZomatoCancellation(payload: any) {
+    const orderId = payload?.order_id || payload?.order?.details?.order_id || 'UNKNOWN';
+    const cancellationReason = payload?.reason || payload?.cancellation_reason || 'Customer requested cancellation';
+
+    const order = await this.prisma.order.findFirst({
+      where: { notes: { contains: orderId } },
+    });
+
+    if (order) {
+      void this.notificationsService.createNotification({
+        recipientRole: 'FRANCHISE_OWNER',
+        outletId: order.outletId,
+        title: `🚨 Zomato Cancellation Request (MAC)`,
+        message: `Order #${orderId}: ${cancellationReason}`,
+        type: 'WARNING',
+      });
+    }
+
+    return { status: 'success', message: `Cancellation event for order ${orderId} received` };
+  }
+
+  /**
+   * Zomato Complaints Webhook
+   */
+  async handleZomatoComplaint(payload: any) {
+    const orderId = payload?.order_id || 'UNKNOWN';
+    const complaintDetails = payload?.complaint?.description || payload?.message || 'Customer complaint registered on Zomato';
+
+    const order = await this.prisma.order.findFirst({
+      where: { notes: { contains: orderId } },
+    });
+
+    if (order) {
+      void this.notificationsService.createNotification({
+        recipientRole: 'FRANCHISE_OWNER',
+        outletId: order.outletId,
+        title: `⚠️ Zomato Customer Complaint`,
+        message: `Order #${orderId}: ${complaintDetails}`,
+        type: 'WARNING',
+      });
+    }
+
+    return { status: 'success', message: 'Complaint recorded' };
+  }
+
+  /**
+   * Zomato Order Ratings Webhook
+   */
+  async handleZomatoRating(payload: any) {
+    const orderId = payload?.order_id || 'UNKNOWN';
+    const rating = payload?.rating || payload?.stars || 5;
+    const review = payload?.review || payload?.comment || '';
+
+    const order = await this.prisma.order.findFirst({
+      where: { notes: { contains: orderId } },
+    });
+
+    if (order) {
+      void this.notificationsService.createNotification({
+        recipientRole: 'FRANCHISE_OWNER',
+        outletId: order.outletId,
+        title: `⭐ New Zomato Rating: ${rating}/5`,
+        message: review ? `"${review}"` : `Customer rated Order #${orderId}`,
+        type: rating >= 4 ? 'SUCCESS' : 'WARNING',
+      });
+    }
+
+    return { status: 'success', message: 'Rating recorded' };
+  }
+
+  /**
+   * Helper to trigger Zomato "Mark Ready" API when kitchen marks order ready
+   */
+  async notifyZomatoOrderReady(orderId: string) {
+    return this.zomatoService.markOrderReady(orderId);
   }
 
   // ─── Business Day Status ─────────────────────────────────────────────────────

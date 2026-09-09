@@ -9,10 +9,12 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { PosTerminalController } from './pos-terminal.controller';
 import { OnlineOrdersWebhookController } from './online-orders-webhook.controller';
 import { PosTerminalService } from './pos-terminal.service';
+import { ZomatoIntegrationService } from './zomato-integration.service';
 
 @Module({
   imports: [DatabaseModule, AuditModule, JwtModule.register({}), PosAuthModule, NotificationsModule],
   controllers: [PosTerminalController, OnlineOrdersWebhookController],
-  providers: [PosTerminalService],
+  providers: [PosTerminalService, ZomatoIntegrationService],
+  exports: [PosTerminalService, ZomatoIntegrationService],
 })
 export class PosTerminalModule {}
