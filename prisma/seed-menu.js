@@ -405,11 +405,40 @@ async function createItemsWithSharedAddons(categoryId, items, sharedAddons, outl
 async function main() {
   console.log('\n🚀 Bombay Falooda — Complete Menu Setup\n');
 
-  // ── 1. Franchise ──────────────────────────────────────────────────────────
-  console.log('📋 Setting up Franchise...');
-  let franchise = await prisma.franchise.findFirst({
-    where: { phone: FRANCHISE_OWNER_PHONE },
+  // ── 1. Smart Resolution of POS Device & Outlet ─────────────────────────
+  console.log('🔍 Locating existing records...');
+  
+  let posDevice = await prisma.posDevice.findUnique({
+    where: { accessKey: POS_ACCESS_KEY },
+    include: { outlet: { include: { franchise: true } } },
   });
+
+  let outlet = posDevice?.outlet || null;
+  let franchise = outlet?.franchise || null;
+
+  // If not resolved from POS key, look up via franchise owner user / phone
+  if (!franchise) {
+    const existingUser = await prisma.user.findFirst({
+      where: { phone: FRANCHISE_OWNER_PHONE },
+      include: { franchise: { include: { outlets: true } } },
+    });
+    if (existingUser?.franchise) {
+      franchise = existingUser.franchise;
+      outlet = franchise.outlets?.[0] || null;
+    }
+  }
+
+  if (!franchise) {
+    franchise = await prisma.franchise.findFirst({
+      where: { phone: FRANCHISE_OWNER_PHONE },
+      include: { outlets: true },
+    });
+    if (franchise && franchise.outlets?.length > 0) {
+      outlet = franchise.outlets[0];
+    }
+  }
+
+  // If franchise still doesn't exist, create it
   if (!franchise) {
     franchise = await prisma.franchise.create({
       data: {
@@ -426,34 +455,45 @@ async function main() {
     });
     console.log('  ✅ Franchise created:', franchise.id);
   } else {
-    franchise = await prisma.franchise.update({
-      where: { id: franchise.id },
-      data: { name: 'Bombay Falooda - Tandalja' },
-    });
-    console.log('  ↻ Franchise updated:', franchise.id);
+    console.log(`  ↻ Using existing Franchise: "${franchise.name}" (${franchise.id})`);
   }
 
-  // ── 2. Franchise Owner User ───────────────────────────────────────────────
-  console.log('👤 Setting up Franchise Owner...');
-  const ownerHash = await bcrypt.hash(DEFAULT_OWNER_PASSWORD, 12);
-  const franchiseOwner = await prisma.user.upsert({
+  // Ensure franchise owner user is linked
+  const existingOwnerUser = await prisma.user.findFirst({
     where: { phone: FRANCHISE_OWNER_PHONE },
-    update: { franchiseId: franchise.id, role: 'FRANCHISE_OWNER', status: 'ACTIVE' },
-    create: {
-      name: 'Franchise Owner',
-      phone: FRANCHISE_OWNER_PHONE,
-      countryCode: '+91',
-      passwordHash: ownerHash,
-      role: 'FRANCHISE_OWNER',
-      status: 'ACTIVE',
-      franchiseId: franchise.id,
-    },
   });
-  console.log('  ✅ Owner:', franchiseOwner.phone, '| Password:', DEFAULT_OWNER_PASSWORD);
 
-  // ── 3. Outlet ─────────────────────────────────────────────────────────────
-  console.log('🏪 Setting up Outlet...');
-  let outlet = await prisma.outlet.findFirst({ where: { franchiseId: franchise.id } });
+  if (existingOwnerUser) {
+    await prisma.user.update({
+      where: { id: existingOwnerUser.id },
+      data: {
+        franchiseId: franchise.id,
+        role: 'FRANCHISE_OWNER',
+        status: 'ACTIVE',
+      },
+    });
+    console.log(`  ↻ Using existing Owner User (${existingOwnerUser.phone}) - Password preserved`);
+  } else {
+    const ownerHash = await bcrypt.hash(DEFAULT_OWNER_PASSWORD, 12);
+    await prisma.user.create({
+      data: {
+        name: 'Franchise Owner',
+        phone: FRANCHISE_OWNER_PHONE,
+        countryCode: '+91',
+        passwordHash: ownerHash,
+        role: 'FRANCHISE_OWNER',
+        status: 'ACTIVE',
+        franchiseId: franchise.id,
+      },
+    });
+    console.log(`  ✅ Owner User created (${FRANCHISE_OWNER_PHONE})`);
+  }
+
+  // Ensure Outlet exists
+  if (!outlet) {
+    outlet = await prisma.outlet.findFirst({ where: { franchiseId: franchise.id } });
+  }
+
   if (!outlet) {
     outlet = await prisma.outlet.create({
       data: {
@@ -471,35 +511,28 @@ async function main() {
         menuSetupStatus: 'DRAFT',
       },
     });
-    console.log('  ✅ Outlet created:', outlet.id, '| Code:', outlet.code);
+    console.log('  ✅ Outlet created:', outlet.name, `(${outlet.id})`);
   } else {
-    outlet = await prisma.outlet.update({
-      where: { id: outlet.id },
-      data: {
-        name: 'Bombay Falooda - Tandalja',
-        code: 'BF-TANDALJA',
-        address: 'Tandalja',
-        city: 'Vadodara',
-        state: 'Gujarat',
-      },
-    });
-    console.log('  ↻ Outlet updated:', outlet.id, '| Code:', outlet.code);
+    console.log(`  ↻ Using existing Outlet: "${outlet.name}" (${outlet.id})`);
   }
 
-  // ── 4. POS Device ─────────────────────────────────────────────────────────
-  console.log('💻 Setting up POS Device...');
-  const posDevice = await prisma.posDevice.upsert({
-    where: { accessKey: POS_ACCESS_KEY },
-    update: { outletId: outlet.id, status: 'ACTIVE' },
-    create: {
-      outletId: outlet.id,
-      name: 'Main POS Terminal',
-      type: 'PERMANENT',
-      status: 'ACTIVE',
-      accessKey: POS_ACCESS_KEY,
-    },
-  });
-  console.log('  ✅ POS Device:', posDevice.accessKey);
+  // Ensure POS Device is linked to this outlet
+  if (!posDevice) {
+    posDevice = await prisma.posDevice.upsert({
+      where: { accessKey: POS_ACCESS_KEY },
+      update: { outletId: outlet.id, status: 'ACTIVE' },
+      create: {
+        outletId: outlet.id,
+        name: 'Main POS Terminal',
+        type: 'PERMANENT',
+        status: 'ACTIVE',
+        accessKey: POS_ACCESS_KEY,
+      },
+    });
+    console.log('  ✅ POS Device linked:', posDevice.accessKey);
+  } else {
+    console.log(`  ↻ Using existing POS Device: ${posDevice.accessKey} (Outlet: ${outlet.name})`);
+  }
 
   // ── 5. Menu Categories ────────────────────────────────────────────────────
   console.log('\n📂 Creating Menu Categories...');
