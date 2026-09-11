@@ -413,7 +413,7 @@ async function main() {
   if (!franchise) {
     franchise = await prisma.franchise.create({
       data: {
-        name: 'Bombay Falooda',
+        name: 'Bombay Falooda - Tandalja',
         ownerName: 'Franchise Owner',
         phone: FRANCHISE_OWNER_PHONE,
         canManageMenu: true,
@@ -426,7 +426,11 @@ async function main() {
     });
     console.log('  ✅ Franchise created:', franchise.id);
   } else {
-    console.log('  ↻ Franchise exists:', franchise.id);
+    franchise = await prisma.franchise.update({
+      where: { id: franchise.id },
+      data: { name: 'Bombay Falooda - Tandalja' },
+    });
+    console.log('  ↻ Franchise updated:', franchise.id);
   }
 
   // ── 2. Franchise Owner User ───────────────────────────────────────────────
@@ -454,11 +458,11 @@ async function main() {
     outlet = await prisma.outlet.create({
       data: {
         franchiseId: franchise.id,
-        name: 'Bombay Falooda Main Outlet',
-        code: 'BF-001',
-        address: 'Main Branch',
-        city: 'Mumbai',
-        state: 'Maharashtra',
+        name: 'Bombay Falooda - Tandalja',
+        code: 'BF-TANDALJA',
+        address: 'Tandalja',
+        city: 'Vadodara',
+        state: 'Gujarat',
         status: 'ACTIVE',
         dineIn: true,
         takeaway: true,
@@ -469,7 +473,17 @@ async function main() {
     });
     console.log('  ✅ Outlet created:', outlet.id, '| Code:', outlet.code);
   } else {
-    console.log('  ↻ Outlet exists:', outlet.id, '| Code:', outlet.code);
+    outlet = await prisma.outlet.update({
+      where: { id: outlet.id },
+      data: {
+        name: 'Bombay Falooda - Tandalja',
+        code: 'BF-TANDALJA',
+        address: 'Tandalja',
+        city: 'Vadodara',
+        state: 'Gujarat',
+      },
+    });
+    console.log('  ↻ Outlet updated:', outlet.id, '| Code:', outlet.code);
   }
 
   // ── 4. POS Device ─────────────────────────────────────────────────────────
