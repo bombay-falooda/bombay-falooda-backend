@@ -11,4 +11,17 @@ export class PosAuthController {
   login(@Body() dto: PosLoginDto) {
     return this.posAuthService.login(dto);
   }
+
+  @Post('google')
+  googleLogin(
+    @Body()
+    dto: {
+      credential?: string;
+      email?: string;
+      name?: string;
+      deviceCode?: string;
+    },
+  ) {
+    return this.posAuthService.googleLogin(dto);
+  }
 }

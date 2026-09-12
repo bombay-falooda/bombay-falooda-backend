@@ -20,6 +20,19 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  @Post('google')
+  googleAuth(
+    @Body()
+    dto: {
+      credential?: string;
+      email?: string;
+      name?: string;
+      portal?: 'superadmin' | 'franchise' | 'pos';
+    },
+  ) {
+    return this.authService.googleAuth(dto);
+  }
+
   @Post('request-login-otp')
   requestLoginOtp(@Body() dto: RequestLoginOtpDto) {
     return this.authService.requestLoginOtp(dto);

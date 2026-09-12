@@ -1,0 +1,1553 @@
+[
+  {
+    "name": "Falooda",
+    "sortOrder": 1,
+    "items": [
+      {
+        "name": "Kesar Falooda",
+        "basePrice": 60,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 60
+          },
+          {
+            "name": "Dry Fruits Mawa Falooda (350 ML)",
+            "price": 70
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 90
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Rajbhog Falooda",
+        "basePrice": 60,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 60
+          },
+          {
+            "name": "Dry Fruits Mawa Falooda (350 ML)",
+            "price": 70
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 90
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Mango Falooda",
+        "basePrice": 60,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 60
+          },
+          {
+            "name": "Dry Fruits Mawa Falooda (350 ML)",
+            "price": 70
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 90
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Rose Falooda",
+        "basePrice": 60,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 60
+          },
+          {
+            "name": "Dry Fruits Mawa Falooda (350 ML)",
+            "price": 70
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 90
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Green Pista Falooda",
+        "basePrice": 60,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 60
+          },
+          {
+            "name": "Dry Fruits Mawa Falooda (350 ML)",
+            "price": 70
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 90
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Sugar Free Falooda",
+        "basePrice": 60,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 60
+          },
+          {
+            "name": "Dry Fruits Mawa Falooda (350 ML)",
+            "price": 70
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 90
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Kaju Cream Falooda",
+        "basePrice": 60,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 60
+          },
+          {
+            "name": "Dry Fruits Mawa Falooda (350 ML)",
+            "price": 70
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 90
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Butterscotch Falooda",
+        "basePrice": 60,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 60
+          },
+          {
+            "name": "Dry Fruits Mawa Falooda (350 ML)",
+            "price": 70
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 90
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Chocolate Falooda",
+        "basePrice": 70,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 70
+          },
+          {
+            "name": "Dry Fruits Mawa Falooda (350 ML)",
+            "price": 80
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 100
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Kulfi Falooda",
+    "sortOrder": 2,
+    "items": [
+      {
+        "name": "Kesar Kulfi Falooda",
+        "basePrice": 100,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 100
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 135
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Green Pista Kulfi Falooda",
+        "basePrice": 100,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 100
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 135
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Mango Kulfi Falooda",
+        "basePrice": 100,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 100
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 135
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Rose Kulfi Falooda",
+        "basePrice": 100,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 100
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 135
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Rajbhog Kulfi Falooda",
+        "basePrice": 110,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 110
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 145
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Chocolate Kulfi Falooda",
+        "basePrice": 110,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 110
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 145
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Bombay Special Falooda (400ML)",
+        "basePrice": 165,
+        "sizes": [],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Upvas Falooda",
+    "sortOrder": 3,
+    "items": [
+      {
+        "name": "Upvas Falooda",
+        "basePrice": 60,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 60
+          },
+          {
+            "name": "Dry Fruits Mawa Falooda (350 ML)",
+            "price": 70
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 90
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Rabdi Upvas Falooda",
+        "basePrice": 80,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 80
+          },
+          {
+            "name": "Dry Fruits Mawa Falooda (350 ML)",
+            "price": 100
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 120
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Kulfi Upvas Falooda",
+        "basePrice": 100,
+        "sizes": [
+          {
+            "name": "Mawa Falooda (300 ML)",
+            "price": 100
+          },
+          {
+            "name": "Special Dryfruit Mawa Falooda (400 ML)",
+            "price": 135
+          }
+        ],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Rabdi Falooda",
+    "sortOrder": 4,
+    "items": [
+      {
+        "name": "Rabdi Mawa Falooda  (300ML)",
+        "basePrice": 80,
+        "sizes": [],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Rabdi Dryfruit Mawa Falooda (350ML)",
+        "basePrice": 100,
+        "sizes": [],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Rabdi Special Dryfruit Mawa Falooda (400ML)",
+        "basePrice": 120,
+        "sizes": [],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Kulhad Rabdi",
+    "sortOrder": 5,
+    "items": [
+      {
+        "name": "Kulhad Rabdi",
+        "basePrice": 60,
+        "sizes": [
+          {
+            "name": "Half",
+            "price": 60
+          },
+          {
+            "name": "Full",
+            "price": 110
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Kulhad Mawa Rabdi",
+        "basePrice": 70,
+        "sizes": [
+          {
+            "name": "Half",
+            "price": 70
+          },
+          {
+            "name": "Full",
+            "price": 130
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Kulhad Dryfruit Rabdi",
+        "basePrice": 70,
+        "sizes": [
+          {
+            "name": "Half",
+            "price": 70
+          },
+          {
+            "name": "Full",
+            "price": 130
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Kulhad Dryfruit Mawa Rabdi",
+        "basePrice": 80,
+        "sizes": [
+          {
+            "name": "Half",
+            "price": 80
+          },
+          {
+            "name": "Full",
+            "price": 150
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "RABDI ( 1 KG )",
+        "basePrice": 500,
+        "sizes": [],
+        "addons": []
+      }
+    ]
+  },
+  {
+    "name": "Bowl Dry Kulfi Rabdi Falooda",
+    "sortOrder": 6,
+    "items": [
+      {
+        "name": "Mawa Malai Bowl Falooda",
+        "basePrice": 120,
+        "sizes": [],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Mango Bowl Falooda",
+        "basePrice": 120,
+        "sizes": [],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Rose Bowl Falooda",
+        "basePrice": 120,
+        "sizes": [],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Green Pista Bowl Falooda",
+        "basePrice": 120,
+        "sizes": [],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Chocolate Bowl Falooda",
+        "basePrice": 130,
+        "sizes": [],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Rajbhog Bowl Falooda",
+        "basePrice": 140,
+        "sizes": [],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      },
+      {
+        "name": "Mix Bowl Falooda",
+        "basePrice": 150,
+        "sizes": [],
+        "addons": [
+          {
+            "name": "Extra Mawa",
+            "price": 20
+          },
+          {
+            "name": "Extra Dry Fruits",
+            "price": 20
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Cold Coco",
+    "sortOrder": 7,
+    "items": [
+      {
+        "name": "Cold Coco (300ML)",
+        "basePrice": 60,
+        "sizes": [],
+        "addons": []
+      },
+      {
+        "name": "Cold Coco With Icecream (300ML)",
+        "basePrice": 70,
+        "sizes": [],
+        "addons": []
+      },
+      {
+        "name": "Cold Coco With Dryfruits (300ML)",
+        "basePrice": 70,
+        "sizes": [],
+        "addons": []
+      },
+      {
+        "name": "Cold Coco Icecream With Dryfurits (300ML)",
+        "basePrice": 80,
+        "sizes": [],
+        "addons": []
+      },
+      {
+        "name": "SP. Cold Coco (350ML)",
+        "basePrice": 100,
+        "sizes": [],
+        "addons": []
+      }
+    ]
+  },
+  {
+    "name": "Kulfi Roll Cut Tukda",
+    "sortOrder": 8,
+    "items": [
+      {
+        "name": "Mawa Malai Kulfi Tukda",
+        "basePrice": 55,
+        "sizes": [
+          {
+            "name": "Half",
+            "price": 55
+          },
+          {
+            "name": "Full",
+            "price": 100
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Mango Kulfi Tukda",
+        "basePrice": 55,
+        "sizes": [
+          {
+            "name": "Half",
+            "price": 55
+          },
+          {
+            "name": "Full",
+            "price": 100
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Rose Kulfi Tukda",
+        "basePrice": 55,
+        "sizes": [
+          {
+            "name": "Half",
+            "price": 55
+          },
+          {
+            "name": "Full",
+            "price": 100
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Green Pista Kulfi Tukda",
+        "basePrice": 55,
+        "sizes": [
+          {
+            "name": "Half",
+            "price": 55
+          },
+          {
+            "name": "Full",
+            "price": 100
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Chocolate Kulfi Tukda",
+        "basePrice": 55,
+        "sizes": [
+          {
+            "name": "Half",
+            "price": 55
+          },
+          {
+            "name": "Full",
+            "price": 100
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Rajbhog Kulfi Tukda",
+        "basePrice": 60,
+        "sizes": [
+          {
+            "name": "Half",
+            "price": 60
+          },
+          {
+            "name": "Full",
+            "price": 110
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Mix Kulfi Tukda",
+        "basePrice": 60,
+        "sizes": [
+          {
+            "name": "Half",
+            "price": 60
+          },
+          {
+            "name": "Full",
+            "price": 110
+          }
+        ],
+        "addons": []
+      }
+    ]
+  },
+  {
+    "name": "Badam Shake",
+    "sortOrder": 9,
+    "items": [
+      {
+        "name": "Badam Shake (300ML)",
+        "basePrice": 70,
+        "sizes": [],
+        "addons": []
+      },
+      {
+        "name": "Badam Shake With Icecream (300ML)",
+        "basePrice": 80,
+        "sizes": [],
+        "addons": []
+      },
+      {
+        "name": "Badam Shake With Mawa (300ML)",
+        "basePrice": 80,
+        "sizes": [],
+        "addons": []
+      },
+      {
+        "name": "Badam Shake Icecream With Dryfurits (300ML)",
+        "basePrice": 90,
+        "sizes": [],
+        "addons": []
+      },
+      {
+        "name": "SP. Badam Shake (350ML)",
+        "basePrice": 110,
+        "sizes": [],
+        "addons": []
+      }
+    ]
+  },
+  {
+    "name": "Kulfi Stick",
+    "sortOrder": 10,
+    "items": [
+      {
+        "name": "Mawa Mallai Kulfi",
+        "basePrice": 25,
+        "sizes": [],
+        "addons": []
+      },
+      {
+        "name": "Green Pista Kulfi",
+        "basePrice": 25,
+        "sizes": [],
+        "addons": []
+      },
+      {
+        "name": "Chocolate Kulfi",
+        "basePrice": 25,
+        "sizes": [],
+        "addons": []
+      },
+      {
+        "name": "Rajbhog Kulfi",
+        "basePrice": 30,
+        "sizes": [],
+        "addons": []
+      }
+    ]
+  },
+  {
+    "name": "Regular Ice Cream",
+    "sortOrder": 11,
+    "items": [
+      {
+        "name": "Venila Ice Cream",
+        "basePrice": 25,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 25
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 50
+          },
+          {
+            "name": "Special Topping",
+            "price": 70
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 120
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 220
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Mango Plain Ice Cream",
+        "basePrice": 30,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 30
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 60
+          },
+          {
+            "name": "Special Topping",
+            "price": 80
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 150
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 280
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Strawberry Ice Cream",
+        "basePrice": 30,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 30
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 60
+          },
+          {
+            "name": "Special Topping",
+            "price": 80
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 150
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 280
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Butter Scotch Ice Cream",
+        "basePrice": 30,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 30
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 60
+          },
+          {
+            "name": "Special Topping",
+            "price": 80
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 150
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 280
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Mawa Ice Cream",
+        "basePrice": 35,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 35
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 70
+          },
+          {
+            "name": "Special Topping",
+            "price": 90
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 170
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 300
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "American Dryfruit Ice Cream",
+        "basePrice": 35,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 35
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 70
+          },
+          {
+            "name": "Special Topping",
+            "price": 90
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 170
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 300
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Rajbhog Ice Cream",
+        "basePrice": 35,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 35
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 70
+          },
+          {
+            "name": "Special Topping",
+            "price": 90
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 170
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 300
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Chocolate Chips Ice Cream",
+        "basePrice": 35,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 35
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 70
+          },
+          {
+            "name": "Special Topping",
+            "price": 90
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 170
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 300
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Cookies cream Ice Cream",
+        "basePrice": 35,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 35
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 70
+          },
+          {
+            "name": "Special Topping",
+            "price": 90
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 170
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 300
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Kaju Gulkand Ice Cream",
+        "basePrice": 35,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 35
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 70
+          },
+          {
+            "name": "Special Topping",
+            "price": 90
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 170
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 300
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Pan Masala Ice Cream",
+        "basePrice": 35,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 35
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 70
+          },
+          {
+            "name": "Special Topping",
+            "price": 90
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 170
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 300
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Sugar Free Ice Cream",
+        "basePrice": 35,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 35
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 70
+          },
+          {
+            "name": "Special Topping",
+            "price": 90
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 170
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 300
+          }
+        ],
+        "addons": []
+      }
+    ]
+  },
+  {
+    "name": "Fresh Fruits Ice Cream",
+    "sortOrder": 12,
+    "items": [
+      {
+        "name": "Guava Fresh Ice Cream",
+        "basePrice": 40,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 40
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 75
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 180
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 330
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Sitaphal Fresh Ice Cream",
+        "basePrice": 40,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 40
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 75
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 180
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 330
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Jambun Fresh Ice Cream",
+        "basePrice": 40,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 40
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 75
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 180
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 330
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Blue Berry Fresh Ice Cream",
+        "basePrice": 40,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 40
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 75
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 180
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 330
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Coconut Malai Fresh Ice Cream",
+        "basePrice": 40,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 40
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 75
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 180
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 330
+          }
+        ],
+        "addons": []
+      }
+    ]
+  },
+  {
+    "name": "Premium Ice Cream",
+    "sortOrder": 13,
+    "items": [
+      {
+        "name": "Golden Parl Ice Cream",
+        "basePrice": 40,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 40
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 75
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 180
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 330
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Anjeer Mawa Ice Cream",
+        "basePrice": 40,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 40
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 75
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 180
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 330
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Chocolate Brownie",
+        "basePrice": 40,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 40
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 75
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 180
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 330
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Almond Carnival Ice Cream",
+        "basePrice": 45,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 45
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 85
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 200
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 360
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Dark Chocolate Mawa Ice Cream",
+        "basePrice": 45,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 45
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 85
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 200
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 360
+          }
+        ],
+        "addons": []
+      },
+      {
+        "name": "Mawa Magic",
+        "basePrice": 45,
+        "sizes": [
+          {
+            "name": "Half (1 Scoop)",
+            "price": 45
+          },
+          {
+            "name": "Full (2 Scoops)",
+            "price": 85
+          },
+          {
+            "name": "500 ML Pack",
+            "price": 200
+          },
+          {
+            "name": "1 LTR Pack",
+            "price": 360
+          }
+        ],
+        "addons": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,847 @@
+[
+  {
+    "rowIndex": 1,
+    "data": [
+      "FALOODA",
+      "Mawa Falooda (300 ML)",
+      "Dry Fruits Mawa Falooda (350 ML)",
+      "Special Dryfruit Mawa Falooda  (400 ML)",
+      "",
+      "KULFI FALOODA",
+      "Mawa Falooda (300 ML)",
+      "Special Dryfruit Mawa Falooda  (400 ML)"
+    ]
+  },
+  {
+    "rowIndex": 2,
+    "data": [
+      "Kesar Falooda ",
+      60,
+      70,
+      90,
+      "",
+      "Kesar Kulfi Falooda ",
+      100,
+      135
+    ]
+  },
+  {
+    "rowIndex": 3,
+    "data": [
+      "Rajbhog Falooda ",
+      60,
+      70,
+      90,
+      "",
+      "Green Pista Kulfi Falooda ",
+      100,
+      135
+    ]
+  },
+  {
+    "rowIndex": 4,
+    "data": [
+      "Mango Falooda ",
+      60,
+      70,
+      90,
+      "",
+      "Mango Kulfi Falooda ",
+      100,
+      135
+    ]
+  },
+  {
+    "rowIndex": 5,
+    "data": [
+      "Rose Falooda ",
+      60,
+      70,
+      90,
+      "",
+      "Rose Kulfi Falooda ",
+      100,
+      135
+    ]
+  },
+  {
+    "rowIndex": 6,
+    "data": [
+      "Green Pista Falooda ",
+      60,
+      70,
+      90,
+      "",
+      "Rajbhog Kulfi Falooda ",
+      110,
+      145
+    ]
+  },
+  {
+    "rowIndex": 7,
+    "data": [
+      "Sugar Free Falooda ",
+      60,
+      70,
+      90,
+      "",
+      "Chocolate Kulfi Falooda ",
+      110,
+      145
+    ]
+  },
+  {
+    "rowIndex": 8,
+    "data": [
+      "Kaju Cream Falooda",
+      60,
+      70,
+      90,
+      "",
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 9,
+    "data": [
+      "Butterscotch Falooda",
+      60,
+      70,
+      90,
+      "",
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 10,
+    "data": [
+      "Chocolate Falooda ",
+      70,
+      80,
+      100,
+      "",
+      "Bombay Special Falooda (400ML)",
+      165,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 12,
+    "data": [
+      "EXTRA MAWA",
+      20,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 13,
+    "data": [
+      "EXRTA DRY FRUITS",
+      20,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 15,
+    "data": [
+      "UPVAS(Fast) FALOODA",
+      "Mawa Falooda (300 ML)",
+      "Dry Fruits Mawa Falooda (350 ML)",
+      "Special Dryfruit Mawa Falooda  (400 ML)",
+      "",
+      "RABDI FALOODA",
+      "PRICE",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 16,
+    "data": [
+      "Upvas Falooda ",
+      60,
+      70,
+      90,
+      "",
+      "Rabdi Mawa Falooda  (300ML)",
+      80,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 17,
+    "data": [
+      "Rabdi Upvas Falooda ",
+      80,
+      100,
+      120,
+      "",
+      "Rabdi Dryfruit Mawa Falooda (350ML)",
+      100,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 18,
+    "data": [
+      "Kulfi Upvas Falooda ",
+      100,
+      "-",
+      135,
+      "",
+      "Rabdi Special Dryfruit Mawa Falooda (400ML)",
+      120,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 21,
+    "data": [
+      "Kulhad Rabdi",
+      "Half",
+      "Full",
+      "",
+      "",
+      "Bowl Dry Kulfi Rabdi Falooda",
+      "PRICE",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 22,
+    "data": [
+      "Kulhad Rabdi",
+      60,
+      110,
+      "",
+      "",
+      "Mawa Malai Bowl Falooda",
+      120,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 23,
+    "data": [
+      "Kulhad Mawa Rabdi ",
+      70,
+      130,
+      "",
+      "",
+      "Mango Bowl Falooda",
+      120,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 24,
+    "data": [
+      "Kulhad Dryfruit Rabdi",
+      70,
+      130,
+      "",
+      "",
+      "Rose Bowl Falooda",
+      120,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 25,
+    "data": [
+      "Kulhad Dryfruit Mawa Rabdi",
+      80,
+      150,
+      "",
+      "",
+      "Green Pista Bowl Falooda",
+      120,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 26,
+    "data": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Chocolate Bowl Falooda",
+      130,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 27,
+    "data": [
+      "RABDI ( 1 KG )",
+      500,
+      "",
+      "",
+      "",
+      "Rajbhog Bowl Falooda ",
+      140,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 28,
+    "data": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Mix Bowl Falooda",
+      150,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 31,
+    "data": [
+      "COLD COCO",
+      "PRICE",
+      "",
+      "",
+      "",
+      "Kulfi Roll Cut Tukda",
+      "Half",
+      "Full"
+    ]
+  },
+  {
+    "rowIndex": 32,
+    "data": [
+      "Cold Coco (300ML)",
+      60,
+      "",
+      "",
+      "",
+      "Mawa Malai Kulfi Tukda",
+      55,
+      100
+    ]
+  },
+  {
+    "rowIndex": 33,
+    "data": [
+      "Cold Coco With Icecream (300ML)",
+      70,
+      "",
+      "",
+      "",
+      "Mango Kulfi Tukda",
+      55,
+      100
+    ]
+  },
+  {
+    "rowIndex": 34,
+    "data": [
+      "Cold Coco With Dryfruits (300ML)",
+      70,
+      "",
+      "",
+      "",
+      "Rose Kulfi Tukda",
+      55,
+      100
+    ]
+  },
+  {
+    "rowIndex": 35,
+    "data": [
+      "Cold Coco Icecream With Dryfurits (300ML)",
+      80,
+      "",
+      "",
+      "",
+      "Green Pista Kulfi Tukda",
+      55,
+      100
+    ]
+  },
+  {
+    "rowIndex": 36,
+    "data": [
+      "SP. Cold Coco (350ML)",
+      100,
+      "",
+      "",
+      "",
+      "Chocolate Kulfi Tukda",
+      55,
+      100
+    ]
+  },
+  {
+    "rowIndex": 37,
+    "data": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Rajbhog Kulfi Tukda",
+      60,
+      110
+    ]
+  },
+  {
+    "rowIndex": 38,
+    "data": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Mix Kulfi Tukda",
+      60,
+      110
+    ]
+  },
+  {
+    "rowIndex": 41,
+    "data": [
+      "BADAM SHAKE",
+      "PRICE",
+      "",
+      "",
+      "",
+      "Kulfi Stick",
+      "Half",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 42,
+    "data": [
+      "Badam Shake (300ML)",
+      70,
+      "",
+      "",
+      "",
+      "Mawa Mallai Kulfi",
+      25,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 43,
+    "data": [
+      "Badam Shake With Icecream (300ML)",
+      80,
+      "",
+      "",
+      "",
+      "Green Pista Kulfi",
+      25,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 44,
+    "data": [
+      "Badam Shake With Mawa (300ML)",
+      80,
+      "",
+      "",
+      "",
+      "Chocolate Kulfi",
+      25,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 45,
+    "data": [
+      "Badam Shake Icecream With Dryfurits (300ML)",
+      90,
+      "",
+      "",
+      "",
+      "Rajbhog Kulfi",
+      30,
+      ""
+    ]
+  },
+  {
+    "rowIndex": 46,
+    "data": [
+      "SP. Badam Shake (350ML)",
+      110,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 49,
+    "data": [
+      "Ice Cream",
+      "Half",
+      "Full",
+      "Sp.Toping",
+      "500 ML",
+      "1 LTR",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 50,
+    "data": [
+      "Venila Ice Cream ",
+      25,
+      50,
+      70,
+      120,
+      220,
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 51,
+    "data": [
+      "Mango Plain Ice Cream",
+      30,
+      60,
+      80,
+      150,
+      280,
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 52,
+    "data": [
+      "Strawberry Ice Cream ",
+      30,
+      60,
+      80,
+      150,
+      280,
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 53,
+    "data": [
+      "Butter Scotch Ice Cream ",
+      30,
+      60,
+      80,
+      150,
+      280,
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 54,
+    "data": [
+      "Mawa Ice Cream ",
+      35,
+      70,
+      90,
+      170,
+      300,
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 55,
+    "data": [
+      "American Dryfruit Ice Cream ",
+      35,
+      70,
+      90,
+      170,
+      300,
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 56,
+    "data": [
+      "Rajbhog Ice Cream ",
+      35,
+      70,
+      90,
+      170,
+      300,
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 57,
+    "data": [
+      "Chocolate Chips Ice Cream ",
+      35,
+      70,
+      90,
+      170,
+      300,
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 58,
+    "data": [
+      "Cookies cream Ice Cream ",
+      35,
+      70,
+      90,
+      170,
+      300,
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 59,
+    "data": [
+      "Kaju Gulkand Ice Cream ",
+      35,
+      70,
+      90,
+      170,
+      300,
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 60,
+    "data": [
+      "Pan Masala Ice Cream ",
+      35,
+      70,
+      90,
+      170,
+      300,
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 61,
+    "data": [
+      "Sugar Free Ice Cream ",
+      35,
+      70,
+      90,
+      170,
+      300,
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 64,
+    "data": [
+      "Fresh Fruits Ice Cream",
+      "Half",
+      "Full",
+      "500 ML",
+      "1 LTR",
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 65,
+    "data": [
+      " Guava Fresh Ice Cream ",
+      40,
+      75,
+      180,
+      330,
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 66,
+    "data": [
+      "Sitaphal Fresh Ice Cream",
+      40,
+      75,
+      180,
+      330,
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 67,
+    "data": [
+      " Jambun Fresh Ice Cream ",
+      40,
+      75,
+      180,
+      330,
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 68,
+    "data": [
+      "Blue Berry Fresh Ice Cream ",
+      40,
+      75,
+      180,
+      330,
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 69,
+    "data": [
+      "Coconut Malai Fresh Ice Cream ",
+      40,
+      75,
+      180,
+      330,
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 72,
+    "data": [
+      "Premium Ice Cream",
+      "Half",
+      "Full",
+      "500 ML",
+      "1 LTR",
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 73,
+    "data": [
+      "Golden Parl Ice Cream ",
+      40,
+      75,
+      180,
+      330,
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 74,
+    "data": [
+      "Anjeer Mawa Ice Cream ",
+      40,
+      75,
+      180,
+      330,
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 75,
+    "data": [
+      "Chocolate Brownie",
+      40,
+      75,
+      180,
+      330,
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 76,
+    "data": [
+      "Almond Carnival Ice Cream",
+      45,
+      85,
+      200,
+      360,
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 77,
+    "data": [
+      "Dark Chocolate Mawa Ice Cream",
+      45,
+      85,
+      200,
+      360,
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 78,
+    "data": [
+      "Mawa Magic",
+      45,
+      85,
+      200,
+      360,
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "rowIndex": 157,
+    "data": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      " ",
+      "",
+      ""
+    ]
+  }
+]

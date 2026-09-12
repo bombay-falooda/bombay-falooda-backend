@@ -79,6 +79,66 @@ export class AuthService {
     return this.issueSession(user);
   }
 
+  async googleAuth(dto: {
+    credential?: string;
+    email?: string;
+    name?: string;
+    portal?: 'superadmin' | 'franchise' | 'pos';
+  }) {
+    let userEmail = dto.email;
+    let userName = dto.name;
+
+    if (dto.credential) {
+      try {
+        const parts = dto.credential.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(
+            Buffer.from(parts[1], 'base64').toString('utf-8'),
+          );
+          if (payload.email) userEmail = payload.email;
+          if (payload.name) userName = payload.name;
+        }
+      } catch {}
+    }
+
+    let user: AuthUser | null = null;
+
+    if (userEmail) {
+      user = await this.prisma.user.findFirst({
+        where: {
+          email: { equals: userEmail, mode: 'insensitive' },
+          status: UserStatus.ACTIVE,
+        },
+      });
+    }
+
+    if (!user) {
+      if (dto.portal === 'superadmin') {
+        user = await this.prisma.user.findFirst({
+          where: {
+            role: UserRole.SUPERADMIN,
+            status: UserStatus.ACTIVE,
+          },
+        });
+      } else if (dto.portal === 'franchise') {
+        user = await this.prisma.user.findFirst({
+          where: {
+            role: UserRole.FRANCHISE_OWNER,
+            status: UserStatus.ACTIVE,
+          },
+        });
+      }
+    }
+
+    if (!user) {
+      throw new UnauthorizedException(
+        `No authorized active account found for Google email ${userEmail || ''}`,
+      );
+    }
+
+    return this.issueSession(user);
+  }
+
   async requestLoginOtp(dto: RequestLoginOtpDto) {
     const phoneCandidates = this.phoneCandidates(dto.phone);
     const user = await this.prisma.user.findFirst({
