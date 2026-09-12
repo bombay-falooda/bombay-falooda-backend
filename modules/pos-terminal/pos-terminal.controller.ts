@@ -180,6 +180,19 @@ export class PosTerminalController {
     return this.posTerminalService.updateItemChannel(session, id, body);
   }
 
+  @Get('bills/unprinted')
+  getUnprintedBillsClean(@CurrentPosSession() session: PosSession) {
+    return this.posTerminalService.getUnprintedBills(session);
+  }
+
+  @Post('bills/batch-print')
+  batchPrintBillsClean(
+    @CurrentPosSession() session: PosSession,
+    @Body('billIds') billIds: string[],
+  ) {
+    return this.posTerminalService.batchPrintComplianceBills(session, billIds || []);
+  }
+
   @Get('gst-compliance/unprinted-bills')
   getUnprintedBills(@CurrentPosSession() session: PosSession) {
     return this.posTerminalService.getUnprintedBills(session);

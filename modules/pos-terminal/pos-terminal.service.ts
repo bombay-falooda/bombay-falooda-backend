@@ -937,20 +937,42 @@ export class PosTerminalService {
   }
 
   async getUnprintedBills(session: PosSession) {
-    const since = this.startOfDay();
-    const unprintedBills = await this.prisma.bill.findMany({
-      where: {
-        posDeviceId: session.posDeviceId,
-        createdAt: { gte: since },
-        status: { not: BillStatus.CANCELLED },
-        isPrinted: false,
-      } as any,
-      orderBy: { createdAt: 'asc' },
-      include: { items: true },
+    const activeDay = await this.prisma.outletBusinessDay.findFirst({
+      where: { outletId: session.outletId, status: BusinessDayStatus.OPEN },
+      orderBy: { startedAt: 'desc' },
+      select: { startedAt: true },
     });
+    const since = activeDay?.startedAt ?? this.startOfDay();
+
+    const [unprintedBills, printedCount, outlet] = await Promise.all([
+      this.prisma.bill.findMany({
+        where: {
+          outletId: session.outletId,
+          createdAt: { gte: since },
+          status: { not: BillStatus.CANCELLED },
+          isPrinted: false,
+        } as any,
+        orderBy: { createdAt: 'asc' },
+        include: { items: true, kotTickets: true },
+      }),
+      this.prisma.bill.count({
+        where: {
+          outletId: session.outletId,
+          isPrinted: true,
+        },
+      }),
+      this.prisma.outlet.findUnique({
+        where: { id: session.outletId },
+        select: { code: true, name: true },
+      }),
+    ]);
+
+    const prefix = outlet?.code?.replace('OLT-', '') || 'KIRTI';
+    const nextInvoiceStart = printedCount + 1;
 
     const timeSlots: Record<string, any[]> = {};
-    for (const bill of unprintedBills) {
+    for (let i = 0; i < unprintedBills.length; i++) {
+      const bill = unprintedBills[i];
       const date = new Date(bill.createdAt);
       const hour = date.getHours();
       const slotStart = Math.floor(hour / 3) * 3;
@@ -959,14 +981,16 @@ export class PosTerminalService {
       
       if (!timeSlots[slotLabel]) timeSlots[slotLabel] = [];
       const billItems = (bill as any).items || [];
+      const kotNumber = (bill as any).kotTickets?.[0]?.kotNumber || `KOT #${i + 1}`;
+
       timeSlots[slotLabel].push({
         id: bill.id,
-        billNumber: bill.billNumber,
+        kotNumber,
         createdAt: bill.createdAt,
         total: Number(bill.total),
-        customerName: bill.customerName || 'Walk-in Customer',
+        customerName: bill.customerName || 'Counter Order',
         itemCount: billItems.length,
-        itemsSummary: billItems.map((i: any) => `${i.quantity}x ${i.name}`).join(', '),
+        itemsSummary: billItems.map((item: any) => `${item.quantity}x ${item.name}`).join(', '),
       });
     }
 
@@ -975,6 +999,8 @@ export class PosTerminalService {
     return {
       timeSlots,
       totalUnprintedCount: unprintedBills.length,
+      nextInvoiceStart,
+      invoicePrefix: `INV-${prefix}-`,
       summary,
     };
   }
@@ -984,18 +1010,44 @@ export class PosTerminalService {
       throw new BadRequestException('No bill IDs provided for batch printing');
     }
 
-    const now = new Date();
-    await this.prisma.bill.updateMany({
-      where: {
-        id: { in: billIds },
-        posDeviceId: session.posDeviceId,
-      },
-      data: {
-        isPrinted: true,
-        printedAt: now,
-        status: BillStatus.FINALIZED,
-      } as any,
+    const outlet = await this.prisma.outlet.findUnique({
+      where: { id: session.outletId },
+      select: { code: true },
     });
+    const prefix = outlet?.code?.replace('OLT-', '') || 'KIRTI';
+
+    // Fetch current printed count to assign strictly consecutive invoice numbers
+    const currentPrintedCount = await this.prisma.bill.count({
+      where: {
+        outletId: session.outletId,
+        isPrinted: true,
+      },
+    });
+
+    let nextInvNum = currentPrintedCount + 1;
+    const billsToPrint = await this.prisma.bill.findMany({
+      where: { id: { in: billIds } },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const now = new Date();
+
+    // Assign sequential gap-free invoice numbers in a transaction
+    await this.prisma.$transaction(
+      billsToPrint.map((bill) => {
+        const sequentialInv = `INV-${prefix}-${String(nextInvNum++).padStart(3, '0')}`;
+        return this.prisma.bill.update({
+          where: { id: bill.id },
+          data: {
+            billNumber: sequentialInv,
+            isPrinted: true,
+            printedAt: now,
+            status: BillStatus.FINALIZED,
+            finalizedAt: bill.createdAt,
+          } as any,
+        });
+      })
+    );
 
     const printedBills = await this.prisma.bill.findMany({
       where: { id: { in: billIds } },
@@ -1010,7 +1062,7 @@ export class PosTerminalService {
       printedCount: printedBills.length,
       printedBills,
       summary: updatedSummary,
-      message: `Successfully batch printed ${printedBills.length} bills in sequential order.`,
+      message: `Successfully generated and printed ${printedBills.length} bills in sequential order.`,
     };
   }
 
