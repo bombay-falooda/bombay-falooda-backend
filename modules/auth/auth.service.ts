@@ -14,6 +14,7 @@ import * as QRCode from 'qrcode';
 import { PrismaService } from '@app/database';
 
 import { UsersService } from '../users/users.service';
+import { WhatsappService } from '@app/whatsapp';
 import { LoginDto } from './dto/login.dto';
 import { EnableAuthenticatorDto } from './dto/enable-authenticator.dto';
 import { RequestLoginOtpDto } from './dto/request-login-otp.dto';
@@ -53,6 +54,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
+    private readonly whatsappService: WhatsappService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -118,6 +120,9 @@ export class AuthService {
         expiresIn: '5m',
       },
     );
+
+    // Send WhatsApp OTP in background
+    void this.whatsappService.sendLoginOtp(user.phone || dto.phone, otp, user.name);
 
     return {
       status: 'PHONE_OTP_SENT',

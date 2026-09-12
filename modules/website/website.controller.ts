@@ -41,4 +41,15 @@ export class WebsiteController {
   googleAuth(@Body() body: { credential?: string; email?: string; name?: string }) {
     return this.websiteService.googleLogin(body.credential, body.email, body.name);
   }
+
+  @Post('auth/request-otp')
+  requestOtp(@Body() body: { phone: string; name?: string }) {
+    return this.websiteService.requestOtp(body.phone, body.name);
+  }
+
+  @Post('auth/verify-otp')
+  verifyOtp(@Body() body: { phone: string; otp: string; name?: string; email?: string }) {
+    return this.websiteService.verifyOtp(body.phone, body.otp, body.name, body.email);
+  }
 }
+

@@ -1,1 +1,2 @@
-export const WHATSAPP_LIB_READY = true;
+export * from './whatsapp.module';
+export * from './whatsapp.service';

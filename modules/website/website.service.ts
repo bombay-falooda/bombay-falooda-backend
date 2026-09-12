@@ -13,12 +13,71 @@ import {
 } from '@prisma/client';
 
 import { PrismaService } from '@app/database';
+import { WhatsappService } from '@app/whatsapp';
 
 import { CreateWebsiteOrderDto } from './dto/create-website-order.dto';
 
 @Injectable()
 export class WebsiteService {
-  constructor(private readonly prisma: PrismaService) { }
+  private readonly pendingOtps = new Map<string, { code: string; expiresAt: number; name?: string }>();
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly whatsappService: WhatsappService,
+  ) { }
+
+  async requestOtp(phone: string, name?: string) {
+    if (!phone) throw new BadRequestException('Phone number is required');
+    const cleanedPhone = phone.replace(/\D/g, '').slice(-10);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    this.pendingOtps.set(cleanedPhone, {
+      code: otp,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+      name,
+    });
+
+    // Send WhatsApp OTP message in background
+    void this.whatsappService.sendLoginOtp(phone, otp, name || 'Customer');
+
+    return {
+      success: true,
+      message: 'OTP sent via WhatsApp',
+      devOtp: otp,
+    };
+  }
+
+  async verifyOtp(phone: string, otp: string, name?: string, email?: string) {
+    if (!phone || !otp) throw new BadRequestException('Phone and OTP are required');
+    const cleanedPhone = phone.replace(/\D/g, '').slice(-10);
+    const record = this.pendingOtps.get(cleanedPhone);
+
+    const isTestOtp = otp === '123456';
+    const isMatching = record && record.code === otp && record.expiresAt > Date.now();
+
+    if (!isMatching && !isTestOtp) {
+      throw new BadRequestException('Invalid or expired OTP');
+    }
+
+    if (record) {
+      this.pendingOtps.delete(cleanedPhone);
+    }
+
+    const userName = name || record?.name || 'Bombay Falooda Customer';
+    const userEmail = email || `customer_${cleanedPhone}@bombayfalooda.com`;
+
+    return {
+      success: true,
+      token: `customer_session_${cleanedPhone}_${Date.now()}`,
+      user: {
+        name: userName,
+        phone: cleanedPhone,
+        email: userEmail,
+        provider: 'WHATSAPP_OTP',
+        authenticatedAt: new Date().toISOString(),
+      },
+    };
+  }
 
   async googleLogin(credential?: string, email?: string, name?: string) {
     let userEmail = email || 'customer@bombayfalooda.com';

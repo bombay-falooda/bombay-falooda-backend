@@ -17,12 +17,14 @@ import { UsersModule } from '../../../modules/users/users.module';
 import { WebsiteModule } from '../../../modules/website/website.module';
 import { NotificationsModule } from '../../../modules/notifications/notifications.module';
 import { DownloadsModule } from '../../../modules/downloads/downloads.module';
+import { WhatsappModule } from '@app/whatsapp';
 import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
     AppConfigModule,
     DatabaseModule,
+    WhatsappModule,
     HealthModule,
     AuditModule,
     AuthModule,
