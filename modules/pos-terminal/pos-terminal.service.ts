@@ -1557,8 +1557,15 @@ export class PosTerminalService {
       type: 'SUCCESS',
     });
 
+    const zomatoOrderId = payload?.order_id || payload?.order?.details?.order_id || payload?.order_details?.order_id;
+    if (data.source === 'ZOMATO' && zomatoOrderId) {
+      void this.zomatoService.confirmOrder(zomatoOrderId, 15);
+    }
+
     return {
       status: 'success',
+      order_id: zomatoOrderId || order.id,
+      prep_time: 15,
       orderId: order.id,
       billId: bill.id,
       kotNumber: kot.kotNumber,
