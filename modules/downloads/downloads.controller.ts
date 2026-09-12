@@ -23,12 +23,14 @@ export class DownloadsController {
       return res.download(filePath, targetName);
     }
 
-    res.setHeader('Content-Type', 'application/x-msdownload');
-    res.setHeader('Content-Disposition', `attachment; filename="${targetName}"`);
+    const RELEASE_BASE = 'https://github.com/bombay-falooda/bombay-falooda-desktop/releases/download/v1.0.0';
+    const remoteUrl = isPos
+      ? `${RELEASE_BASE}/Bombay-Falooda-POS-Setup.exe`
+      : isFranchise
+      ? `${RELEASE_BASE}/Bombay-Falooda-Franchise-Setup.exe`
+      : `${RELEASE_BASE}/Bombay-Falooda-SuperAdmin-Setup.exe`;
 
-    // Stream a clean Windows executable header stub if physical binary is not present
-    const exeHeader = Buffer.from('4d5a90000300000004000000ffff0000b8000000000000004000000000000000', 'hex');
-    res.send(exeHeader);
+    return res.redirect(302, remoteUrl);
   }
 }
 
