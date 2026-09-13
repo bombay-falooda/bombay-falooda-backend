@@ -10,11 +10,12 @@ import { PosTerminalController } from './pos-terminal.controller';
 import { OnlineOrdersWebhookController } from './online-orders-webhook.controller';
 import { PosTerminalService } from './pos-terminal.service';
 import { ZomatoIntegrationService } from './zomato-integration.service';
+import { SwiggyIntegrationService } from './swiggy-integration.service';
 
 @Module({
   imports: [DatabaseModule, AuditModule, JwtModule.register({}), PosAuthModule, NotificationsModule],
   controllers: [PosTerminalController, OnlineOrdersWebhookController],
-  providers: [PosTerminalService, ZomatoIntegrationService],
-  exports: [PosTerminalService, ZomatoIntegrationService],
+  providers: [PosTerminalService, ZomatoIntegrationService, SwiggyIntegrationService],
+  exports: [PosTerminalService, ZomatoIntegrationService, SwiggyIntegrationService],
 })
 export class PosTerminalModule {}

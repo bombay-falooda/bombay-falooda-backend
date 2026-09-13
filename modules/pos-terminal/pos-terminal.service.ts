@@ -27,6 +27,7 @@ import { FinalizeBillDto } from './dto/finalize-bill.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { ZomatoIntegrationService } from './zomato-integration.service';
+import { SwiggyIntegrationService } from './swiggy-integration.service';
 
 @Injectable()
 export class PosTerminalService {
@@ -35,6 +36,7 @@ export class PosTerminalService {
     private readonly auditService: AuditService,
     private readonly notificationsService: NotificationsService,
     private readonly zomatoService: ZomatoIntegrationService,
+    private readonly swiggyService: SwiggyIntegrationService,
   ) {}
 
   async me(session: PosSession) {
@@ -476,6 +478,15 @@ export class PosTerminalService {
       data: { status: dto.status, posDeviceId: session.posDeviceId },
       include: { items: true },
     });
+
+    const extOrderId = order.notes?.match(/([0-9]{8,20})/)?.[1] || order.id;
+    if (order.source === OrderSource.ZOMATO) {
+      if (dto.status === 'READY') void this.zomatoService.markOrderReady(extOrderId);
+      if (dto.status === 'COMPLETED' || dto.status === 'DELIVERED') void this.zomatoService.markOrderPickedUp(extOrderId);
+    } else if (order.source === OrderSource.SWIGGY) {
+      if (dto.status === 'READY') void this.swiggyService.markOrderReady(extOrderId);
+      if (dto.status === 'COMPLETED' || dto.status === 'DELIVERED') void this.swiggyService.markOrderPickedUp(extOrderId);
+    }
 
     await this.log('POS_DIGITAL_ORDER_STATUS_UPDATED', 'Order', orderId, session, {
       status: dto.status,
@@ -1144,13 +1155,11 @@ export class PosTerminalService {
       type: 'WARNING',
     });
 
-    void this.notificationsService.createNotification({
-      recipientRole: 'SUPERADMIN',
-      outletId: session.outletId,
-      title: '⚠️ Item Channel Status Changed',
-      message: `Item "${updated.item.name}" toggled ${body.enabled ? 'ON' : 'OFF'} for ${body.channel.toUpperCase()}`,
-      type: 'WARNING',
-    });
+    if (body.channel === 'zomato') {
+      void this.zomatoService.updateItemStock(session.outletId, updated.item.id, body.enabled);
+    } else if (body.channel === 'swiggy') {
+      void this.swiggyService.updateItemStock(session.outletId, updated.item.id, body.enabled);
+    }
 
     return {
       id: updated.id,
@@ -1612,6 +1621,8 @@ export class PosTerminalService {
     const zomatoOrderId = payload?.order_id || payload?.order?.details?.order_id || payload?.order_details?.order_id;
     if (data.source === 'ZOMATO' && zomatoOrderId) {
       void this.zomatoService.confirmOrder(zomatoOrderId, 15);
+    } else if (data.source === 'SWIGGY' && zomatoOrderId) {
+      void this.swiggyService.confirmOrder(zomatoOrderId, 15);
     }
 
     return {
