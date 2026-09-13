@@ -205,6 +205,10 @@ model Outlet {
   deliveryKmPricing Json?
   openingTime String?
   closingTime String?
+  zomatoResId String?
+  swiggyResId String?
+  ezcaterStoreId String?
+  urbanpiperStoreId String?
   menuSetupStatus MenuSetupStatus @default(NOT_STARTED)
   menuEditingLocked Boolean @default(false)
   menuEditingUnlockedUntil DateTime?

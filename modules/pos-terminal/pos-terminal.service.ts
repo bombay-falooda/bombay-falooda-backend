@@ -1422,12 +1422,26 @@ export class PosTerminalService {
 
     let outlet = storeId
       ? await this.prisma.outlet.findFirst({
-          where: { OR: [{ id: storeId }, { code: storeId }] },
+          where: {
+            OR: [
+              { id: storeId },
+              { code: storeId },
+              { zomatoResId: storeId },
+              { swiggyResId: storeId },
+              { ezcaterStoreId: storeId },
+              { urbanpiperStoreId: storeId },
+              { name: { contains: storeId, mode: 'insensitive' } },
+            ],
+            status: 'ACTIVE',
+          },
         })
       : null;
 
     if (!outlet) {
-      outlet = await this.prisma.outlet.findFirst();
+      outlet = await this.prisma.outlet.findFirst({
+        where: { status: 'ACTIVE' },
+        orderBy: { createdAt: 'asc' },
+      });
     }
 
     if (!outlet) {
@@ -1867,6 +1881,8 @@ export class PosTerminalService {
           where: {
             OR: [
               { id: storeNumber },
+              { code: storeNumber },
+              { ezcaterStoreId: storeNumber },
               { name: { contains: storeNumber, mode: 'insensitive' } },
             ],
             status: 'ACTIVE',
@@ -2145,6 +2161,10 @@ export class PosTerminalService {
           where: {
             OR: [
               { id: storeRef },
+              { code: storeRef },
+              { urbanpiperStoreId: storeRef },
+              { zomatoResId: storeRef },
+              { swiggyResId: storeRef },
               { name: { contains: storeRef, mode: 'insensitive' } },
             ],
             status: 'ACTIVE',
