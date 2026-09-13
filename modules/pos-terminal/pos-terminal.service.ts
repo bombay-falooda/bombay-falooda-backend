@@ -1432,9 +1432,9 @@ export class PosTerminalService {
               { ezcaterStoreId: storeId },
               { urbanpiperStoreId: storeId },
               { name: { contains: storeId, mode: 'insensitive' } },
-            ],
+            ] as any,
             status: 'ACTIVE',
-          },
+          } as any,
         })
       : null;
 
@@ -1885,9 +1885,9 @@ export class PosTerminalService {
               { code: storeNumber },
               { ezcaterStoreId: storeNumber },
               { name: { contains: storeNumber, mode: 'insensitive' } },
-            ],
+            ] as any,
             status: 'ACTIVE',
-          },
+          } as any,
         })
       : null;
 
@@ -2167,9 +2167,9 @@ export class PosTerminalService {
               { zomatoResId: storeRef },
               { swiggyResId: storeRef },
               { name: { contains: storeRef, mode: 'insensitive' } },
-            ],
+            ] as any,
             status: 'ACTIVE',
-          },
+          } as any,
         })
       : null;
 

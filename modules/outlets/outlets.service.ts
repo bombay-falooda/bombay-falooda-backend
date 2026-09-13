@@ -449,7 +449,7 @@ export class OutletsService {
       franchise: dto.franchiseId
         ? { connect: { id: dto.franchiseId } }
         : undefined,
-    };
+    } as any;
   }
 
   private toUpdateInput(dto: UpdateOutletDto): Prisma.OutletUpdateInput {
@@ -487,6 +487,6 @@ export class OutletsService {
           : dto.franchiseId === null
             ? { disconnect: true }
             : { connect: { id: dto.franchiseId } },
-    };
+    } as any;
   }
 }

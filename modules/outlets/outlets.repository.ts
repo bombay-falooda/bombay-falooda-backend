@@ -81,7 +81,7 @@ export class OutletsRepository {
     });
   }
 
-  private defaultSelect() {
+  private defaultSelect(): Prisma.OutletSelect {
     return {
       id: true,
       franchiseId: true,
@@ -126,6 +126,6 @@ export class OutletsRepository {
           users: true,
         },
       },
-    } satisfies Prisma.OutletSelect;
+    };
   }
 }
