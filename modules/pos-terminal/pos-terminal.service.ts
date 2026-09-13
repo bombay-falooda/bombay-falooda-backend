@@ -1420,6 +1420,7 @@ export class PosTerminalService {
       payload.order?.store_id ||
       payload.outlet_code;
 
+    // Resolve outlet dynamically by ID, code, or third-party platform store identifiers
     let outlet = storeId
       ? await this.prisma.outlet.findFirst({
           where: {
