@@ -130,4 +130,21 @@ export class OnlineOrdersWebhookController {
       return { status: 'error', message: err?.message || 'Error processing UrbanPiper webhook' };
     }
   }
+
+  /**
+   * 10. EZCATER WEBHOOK ENDPOINT
+   * Receives ezCater event notifications (submitted, accepted, modified, cancelled)
+   * Specification: https://api.ezcater.io/subscribing-to-order-notifications
+   */
+  @Post('ezcater')
+  @HttpCode(HttpStatus.OK)
+  async handleEzcaterWebhook(@Body() payload: any) {
+    this.logger.log(`📦 [ezCater Webhook] Payload: ${JSON.stringify(payload)}`);
+    try {
+      return await this.posTerminalService.handleEzcaterWebhook(payload);
+    } catch (err: any) {
+      this.logger.error(`❌ [ezCater Webhook Error] ${err?.message || err}`);
+      return { status: 'error', message: err?.message || 'Error processing ezCater webhook' };
+    }
+  }
 }

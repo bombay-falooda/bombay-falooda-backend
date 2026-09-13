@@ -28,6 +28,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { ZomatoIntegrationService } from './zomato-integration.service';
 import { SwiggyIntegrationService } from './swiggy-integration.service';
+import { EzcaterIntegrationService } from './ezcater-integration.service';
 
 @Injectable()
 export class PosTerminalService {
@@ -37,6 +38,7 @@ export class PosTerminalService {
     private readonly notificationsService: NotificationsService,
     private readonly zomatoService: ZomatoIntegrationService,
     private readonly swiggyService: SwiggyIntegrationService,
+    private readonly ezcaterService: EzcaterIntegrationService,
   ) {}
 
   async me(session: PosSession) {
@@ -1159,6 +1161,8 @@ export class PosTerminalService {
       void this.zomatoService.updateItemStock(session.outletId, updated.item.id, body.enabled);
     } else if (body.channel === 'swiggy') {
       void this.swiggyService.updateItemStock(session.outletId, updated.item.id, body.enabled);
+    } else if (body.channel === 'ezcater') {
+      void this.ezcaterService.updateItemStock(session.outletId, updated.item.id, body.enabled);
     }
 
     return {
@@ -1805,10 +1809,260 @@ export class PosTerminalService {
   }
 
   /**
-   * Helper to trigger Zomato "Mark Ready" API when kitchen marks order ready
+   * Universal ezCater Webhook Ingestion & Order Normalization
+   * Specification: https://api.ezcater.io/subscribing-to-order-notifications
    */
-  async notifyZomatoOrderReady(orderId: string) {
-    return this.zomatoService.markOrderReady(orderId);
+  async handleEzcaterWebhook(payload: any) {
+    const eventKey = (payload?.key || payload?.event || payload?.action || 'submitted').toLowerCase();
+    const orderUuid = payload?.entity_id || payload?.order_id || payload?.uuid || payload?.id;
+
+    if (!orderUuid) {
+      // If full order payload is posted directly without webhook wrapper
+      return this.processOnlineWebhookOrder({
+        source: 'EZCATER',
+        rawPayload: payload,
+      });
+    }
+
+    // Handle Order Cancellation event from ezCater
+    if (eventKey === 'cancelled' || eventKey === 'canceled' || eventKey === 'rejected') {
+      const existingOrder = await this.prisma.order.findFirst({
+        where: { notes: { contains: orderUuid } },
+        include: { outlet: true },
+      });
+
+      if (existingOrder) {
+        await this.prisma.order.update({
+          where: { id: existingOrder.id },
+          data: {
+            status: OrderStatus.CANCELLED,
+            notes: `${existingOrder.notes || ''} | [ezCater Event]: ${eventKey.toUpperCase()}`,
+          },
+        });
+
+        void this.notificationsService.createNotification({
+          recipientRole: 'FRANCHISE_OWNER',
+          outletId: existingOrder.outletId,
+          title: `🚨 ezCater Catering Order Cancelled (#${existingOrder.id.slice(-6)})`,
+          message: `Order #${orderUuid} was ${eventKey} by ezCater/Customer.`,
+          type: 'WARNING',
+        });
+      }
+
+      return { status: 'success', message: `ezCater cancellation recorded for order ${orderUuid}` };
+    }
+
+    // For submitted / accepted / relish_finalized: Fetch full details via GraphQL
+    const detailsRes = await this.ezcaterService.getOrderDetails(orderUuid);
+    const ezOrder = detailsRes?.order;
+
+    // Resolve matching outlet
+    const storeNumber = ezOrder?.caterer?.storenumber || payload?.parent_id;
+    let outlet = storeNumber
+      ? await this.prisma.outlet.findFirst({
+          where: {
+            OR: [
+              { id: storeNumber },
+              { name: { contains: storeNumber, mode: 'insensitive' } },
+            ],
+            status: 'ACTIVE',
+          },
+        })
+      : null;
+
+    if (!outlet) {
+      outlet = await this.prisma.outlet.findFirst({
+        where: { status: 'ACTIVE' },
+        orderBy: { createdAt: 'asc' },
+      });
+    }
+
+    if (!outlet) {
+      throw new BadRequestException('No active outlet available to accept ezCater catering order.');
+    }
+
+    // Normalize ezCater order items
+    const rawItems = ezOrder?.caterercart?.orderitems || [];
+    const orderItemsData: Array<{
+      itemId: string;
+      name: string;
+      quantity: number;
+      unitPrice: number;
+      total: number;
+      notes?: string;
+    }> = [];
+
+    const fallbackMenuItem = await this.prisma.menuItem.findFirst({
+      where: { isActive: true },
+    });
+
+    let calculatedTotal = 0;
+    for (const item of rawItems) {
+      const qty = Number(item.quantity || 1);
+      const unitSubunits = item.totalinsubunits?.subunits || 0;
+      const unitPrice = unitSubunits > 0 ? unitSubunits / 100 / qty : 0;
+      const itemTotal = unitPrice * qty;
+      calculatedTotal += itemTotal;
+
+      const matchedMenuItem = await this.prisma.menuItem.findFirst({
+        where: {
+          OR: [
+            { id: item.positemid || undefined },
+            { name: { contains: item.name, mode: 'insensitive' } },
+          ],
+        },
+      });
+
+      const customizationNotes = item.customizations?.length
+        ? item.customizations.map((c) => `${c.name} (x${c.quantity})`).join(', ')
+        : '';
+      const notes = [item.specialinstructions, customizationNotes]
+        .filter(Boolean)
+        .join(' | ');
+
+      orderItemsData.push({
+        itemId: matchedMenuItem?.id || fallbackMenuItem?.id || 'ezcater-item',
+        name: item.name,
+        quantity: qty,
+        unitPrice,
+        total: itemTotal,
+        notes: notes || undefined,
+      });
+    }
+
+    const totalSubunits = ezOrder?.totals?.customertotaldue?.subunits || ezOrder?.totals?.subtotal?.subunits || 0;
+    const finalTotal = totalSubunits > 0 ? totalSubunits / 100 : (calculatedTotal || 100);
+
+    const customerName = ezOrder?.ordercustomer?.fullname || ezOrder?.event?.contact?.name || 'ezCater Client';
+    const customerPhone = ezOrder?.event?.contact?.phone || '';
+    const eventTime = ezOrder?.event?.catererhandofffoodtime || ezOrder?.event?.timestamp || '';
+    const headcount = ezOrder?.event?.headcount ? ` | Guests: ${ezOrder.event.headcount}` : '';
+    const deliveryNotes = ezOrder?.event?.address?.deliveryinstructions
+      ? ` | Instructions: ${ezOrder.event.address.deliveryinstructions}`
+      : '';
+
+    const order = await this.prisma.order.create({
+      data: {
+        outletId: outlet.id,
+        type: OrderType.DELIVERY,
+        source: OrderSource.EZCATER,
+        status: OrderStatus.ACCEPTED,
+        customerName,
+        customerPhone,
+        total: finalTotal,
+        subtotal: finalTotal,
+        taxAmount: ezOrder?.totals?.salestax?.subunits ? ezOrder.totals.salestax.subunits / 100 : 0,
+        discount: 0,
+        notes: `ezCater Catering Order (${orderUuid})${eventTime ? ' | Due: ' + eventTime : ''}${headcount}${deliveryNotes}`,
+        items: {
+          create: orderItemsData.map((item) => ({
+            itemId: item.itemId,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total,
+            notes: item.notes,
+          })),
+        },
+      },
+      include: { items: true },
+    });
+
+    const posDevice = await this.prisma.posDevice.findFirst({
+      where: { outletId: outlet.id },
+    });
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    let billCount = await this.prisma.bill.count({
+      where: {
+        createdAt: { gte: startOfDay },
+        outletId: outlet.id,
+      },
+    });
+
+    const bill = await this.prisma.bill.create({
+      data: {
+        outletId: outlet.id,
+        posDeviceId: posDevice?.id || 'pos-default',
+        orderId: order.id,
+        billNumber: `BILL-EZ-${billCount + 1}`,
+        status: BillStatus.HELD,
+        customerName,
+        customerPhone,
+        notes: order.notes,
+        subtotal: finalTotal,
+        taxAmount: order.taxAmount,
+        discount: 0,
+        total: finalTotal,
+        items: {
+          create: orderItemsData.map((item) => ({
+            itemId: item.itemId,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total,
+            notes: item.notes,
+          })),
+        },
+        businessDayId: await this.prisma.outletBusinessDay
+          .findFirst({
+            where: { outletId: outlet.id, status: BusinessDayStatus.OPEN },
+            orderBy: { startedAt: 'desc' },
+            select: { id: true },
+          })
+          .then((d) => d?.id ?? null),
+      },
+      include: this.billInclude(),
+    });
+
+    const kotCount = await this.prisma.kotTicket.count({
+      where: {
+        createdAt: { gte: startOfDay },
+        bill: { outletId: outlet.id },
+      },
+    });
+
+    const kot = await this.prisma.kotTicket.create({
+      data: {
+        billId: bill.id,
+        kotNumber: `KOT-EZ-${kotCount + 1}`,
+        notes: order.notes,
+        printedAt: new Date(),
+        items: {
+          create: bill.items.map((item) => ({
+            billItemId: item.id,
+            quantity: item.quantity,
+            notes: item.notes,
+          })),
+        },
+      },
+      include: {
+        items: { include: { billItem: true } },
+        bill: { include: { outlet: true, posDevice: true } },
+      },
+    });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'FRANCHISE_OWNER',
+      outletId: outlet.id,
+      title: `🎉 New ezCater Catering Order!`,
+      message: `Order #${order.id.slice(-6)} (${customerName}) for ₹${finalTotal}${eventTime ? ' — Delivery: ' + new Date(eventTime).toLocaleTimeString() : ''}. KOT #${kot.kotNumber} generated.`,
+      type: 'SUCCESS',
+    });
+
+    // Auto-accept order on ezCater GraphQL API
+    void this.ezcaterService.acceptOrder(orderUuid, false);
+
+    return {
+      status: 'success',
+      order_id: orderUuid,
+      orderId: order.id,
+      billId: bill.id,
+      kotNumber: kot.kotNumber,
+      message: `ezCater order successfully synced and dispatched to outlet ${outlet.name}`,
+    };
   }
 
   // ─── Business Day Status ─────────────────────────────────────────────────────
