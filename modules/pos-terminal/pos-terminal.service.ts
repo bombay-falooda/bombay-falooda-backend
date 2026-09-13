@@ -481,11 +481,11 @@ export class PosTerminalService {
 
     const extOrderId = order.notes?.match(/([0-9]{8,20})/)?.[1] || order.id;
     if (order.source === OrderSource.ZOMATO) {
-      if (dto.status === 'READY') void this.zomatoService.markOrderReady(extOrderId);
-      if (dto.status === 'COMPLETED' || dto.status === 'DELIVERED') void this.zomatoService.markOrderPickedUp(extOrderId);
+      if (dto.status === OrderStatus.READY) void this.zomatoService.markOrderReady(extOrderId);
+      if (dto.status === OrderStatus.COMPLETED) void this.zomatoService.markOrderPickedUp(extOrderId);
     } else if (order.source === OrderSource.SWIGGY) {
-      if (dto.status === 'READY') void this.swiggyService.markOrderReady(extOrderId);
-      if (dto.status === 'COMPLETED' || dto.status === 'DELIVERED') void this.swiggyService.markOrderPickedUp(extOrderId);
+      if (dto.status === OrderStatus.READY) void this.swiggyService.markOrderReady(extOrderId);
+      if (dto.status === OrderStatus.COMPLETED) void this.swiggyService.markOrderPickedUp(extOrderId);
     }
 
     await this.log('POS_DIGITAL_ORDER_STATUS_UPDATED', 'Order', orderId, session, {
