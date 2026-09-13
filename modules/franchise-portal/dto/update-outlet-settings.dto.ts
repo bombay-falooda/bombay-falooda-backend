@@ -85,4 +85,20 @@ export class UpdateOutletSettingsDto {
   @IsOptional()
   @IsString()
   closingTime?: string | null;
+
+  @IsOptional()
+  @IsString()
+  zomatoResId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  swiggyResId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  ezcaterStoreId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  urbanpiperStoreId?: string | null;
 }

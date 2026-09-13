@@ -80,4 +80,20 @@ export class UpdateOutletDto {
 
   @IsOptional()
   deliveryKmPricing?: Array<{ km: number; price: number }> | null;
+
+  @IsOptional()
+  @IsString()
+  zomatoResId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  swiggyResId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  ezcaterStoreId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  urbanpiperStoreId?: string | null;
 }

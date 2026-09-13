@@ -442,6 +442,10 @@ export class OutletsService {
         : undefined,
       openingTime: dto.openingTime,
       closingTime: dto.closingTime,
+      zomatoResId: dto.zomatoResId,
+      swiggyResId: dto.swiggyResId,
+      ezcaterStoreId: dto.ezcaterStoreId,
+      urbanpiperStoreId: dto.urbanpiperStoreId,
       franchise: dto.franchiseId
         ? { connect: { id: dto.franchiseId } }
         : undefined,
@@ -473,6 +477,10 @@ export class OutletsService {
             : (dto.deliveryKmPricing as unknown as Prisma.InputJsonValue),
       openingTime: dto.openingTime,
       closingTime: dto.closingTime,
+      zomatoResId: dto.zomatoResId,
+      swiggyResId: dto.swiggyResId,
+      ezcaterStoreId: dto.ezcaterStoreId,
+      urbanpiperStoreId: dto.urbanpiperStoreId,
       franchise:
         dto.franchiseId === undefined
           ? undefined

@@ -77,4 +77,20 @@ export class CreateOutletDto {
 
   @IsOptional()
   deliveryKmPricing?: Array<{ km: number; price: number }>;
+
+  @IsOptional()
+  @IsString()
+  zomatoResId?: string;
+
+  @IsOptional()
+  @IsString()
+  swiggyResId?: string;
+
+  @IsOptional()
+  @IsString()
+  ezcaterStoreId?: string;
+
+  @IsOptional()
+  @IsString()
+  urbanpiperStoreId?: string;
 }
