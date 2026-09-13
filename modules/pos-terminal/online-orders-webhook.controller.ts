@@ -121,10 +121,7 @@ export class OnlineOrdersWebhookController {
   async handleUrbanpiperWebhook(@Body() payload: any) {
     this.logger.log(`📦 [UrbanPiper Webhook] Payload: ${JSON.stringify(payload)}`);
     try {
-      return await this.posTerminalService.processOnlineWebhookOrder({
-        source: payload?.order?.details?.channel?.toUpperCase() || 'URBANPIPER',
-        rawPayload: payload,
-      });
+      return await this.posTerminalService.handleUrbanpiperWebhook(payload);
     } catch (err: any) {
       this.logger.error(`❌ [UrbanPiper Webhook Error] ${err?.message || err}`);
       return { status: 'error', message: err?.message || 'Error processing UrbanPiper webhook' };

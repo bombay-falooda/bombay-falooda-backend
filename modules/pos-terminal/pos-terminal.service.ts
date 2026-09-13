@@ -29,6 +29,7 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { ZomatoIntegrationService } from './zomato-integration.service';
 import { SwiggyIntegrationService } from './swiggy-integration.service';
 import { EzcaterIntegrationService } from './ezcater-integration.service';
+import { UrbanpiperIntegrationService } from './urbanpiper-integration.service';
 
 @Injectable()
 export class PosTerminalService {
@@ -39,6 +40,7 @@ export class PosTerminalService {
     private readonly zomatoService: ZomatoIntegrationService,
     private readonly swiggyService: SwiggyIntegrationService,
     private readonly ezcaterService: EzcaterIntegrationService,
+    private readonly urbanpiperService: UrbanpiperIntegrationService,
   ) {}
 
   async me(session: PosSession) {
@@ -1159,8 +1161,10 @@ export class PosTerminalService {
 
     if (body.channel === 'zomato') {
       void this.zomatoService.updateItemStock(session.outletId, updated.item.id, body.enabled);
+      void this.urbanpiperService.updateItemStock(session.outletId, [updated.item.id], body.enabled);
     } else if (body.channel === 'swiggy') {
       void this.swiggyService.updateItemStock(session.outletId, updated.item.id, body.enabled);
+      void this.urbanpiperService.updateItemStock(session.outletId, [updated.item.id], body.enabled);
     } else if (body.channel === 'ezcater') {
       void this.ezcaterService.updateItemStock(session.outletId, updated.item.id, body.enabled);
     }
@@ -2062,6 +2066,282 @@ export class PosTerminalService {
       billId: bill.id,
       kotNumber: kot.kotNumber,
       message: `ezCater order successfully synced and dispatched to outlet ${outlet.name}`,
+    };
+  }
+
+  /**
+   * Universal UrbanPiper Hub Webhook Ingestion
+   * Handles: order_relay (Zomato/Swiggy/Magicpin), order_status_update, rider_status
+   * Specification: https://developer.urbanpiper.com/docs/api-reference
+   */
+  async handleUrbanpiperWebhook(payload: any) {
+    const eventType = (payload?.event || payload?.action || 'order_relay').toLowerCase();
+
+    // 1. Order Status Update (Cancellation / State sync)
+    if (eventType === 'order_status_update' || payload?.current_state) {
+      const orderId = String(payload?.order_id || payload?.order?.details?.id || 'UNKNOWN');
+      const currentState = (payload?.current_state || payload?.new_state || '').toUpperCase();
+
+      const existing = await this.prisma.order.findFirst({
+        where: { notes: { contains: orderId } },
+        include: { outlet: true },
+      });
+
+      if (existing) {
+        if (currentState.includes('CANCEL')) {
+          await this.prisma.order.update({
+            where: { id: existing.id },
+            data: {
+              status: OrderStatus.CANCELLED,
+              notes: `${existing.notes || ''} | [UrbanPiper]: CANCELLED`,
+            },
+          });
+
+          void this.notificationsService.createNotification({
+            recipientRole: 'FRANCHISE_OWNER',
+            outletId: existing.outletId,
+            title: `🚨 Aggregator Order #${existing.id.slice(-6)} Cancelled`,
+            message: `Order #${orderId} was cancelled on UrbanPiper.`,
+            type: 'WARNING',
+          });
+        }
+      }
+
+      return { status: 'success', message: `UrbanPiper status update for ${orderId} processed` };
+    }
+
+    // 2. Rider Status Update
+    if (eventType === 'rider_status' || payload?.delivery_info) {
+      const orderId = String(payload?.order_id || payload?.order?.details?.id || 'UNKNOWN');
+      const deliveryInfo = payload?.delivery_info || {};
+      const riderName = deliveryInfo?.delivery_person_name || 'Delivery Partner';
+      const riderPhone = deliveryInfo?.delivery_person_phone || '';
+      const riderStatus = (deliveryInfo?.current_state || payload?.status || 'ASSIGNED').toUpperCase();
+
+      const existing = await this.prisma.order.findFirst({
+        where: { notes: { contains: orderId } },
+      });
+
+      if (existing) {
+        void this.notificationsService.createNotification({
+          recipientRole: 'FRANCHISE_OWNER',
+          outletId: existing.outletId,
+          title: `🛵 Delivery Partner: ${riderStatus}`,
+          message: `Order #${orderId} - Rider ${riderName} ${riderPhone ? '(' + riderPhone + ')' : ''}`,
+          type: 'INFO',
+        });
+      }
+
+      return { status: 'success', message: `Rider update for ${orderId} recorded` };
+    }
+
+    // 3. New Order Relay (Zomato / Swiggy / Magicpin incoming order via UrbanPiper Hub)
+    const channel = (payload?.order?.details?.channel || payload?.channel || 'ZOMATO').toUpperCase();
+    const orderId = String(payload?.order?.details?.id || payload?.order_id || Date.now());
+    const storeRef = payload?.order?.store?.merchant_ref_id || payload?.order?.store?.ref_id || payload?.store_id;
+
+    let outlet = storeRef
+      ? await this.prisma.outlet.findFirst({
+          where: {
+            OR: [
+              { id: storeRef },
+              { name: { contains: storeRef, mode: 'insensitive' } },
+            ],
+            status: 'ACTIVE',
+          },
+        })
+      : null;
+
+    if (!outlet) {
+      outlet = await this.prisma.outlet.findFirst({
+        where: { status: 'ACTIVE' },
+        orderBy: { createdAt: 'asc' },
+      });
+    }
+
+    if (!outlet) {
+      throw new BadRequestException('No active outlet available to accept UrbanPiper online order.');
+    }
+
+    const rawItems = payload?.order?.items || payload?.items || [];
+    const orderItemsData: Array<{
+      itemId: string;
+      name: string;
+      quantity: number;
+      unitPrice: number;
+      total: number;
+      notes?: string;
+    }> = [];
+
+    const fallbackMenuItem = await this.prisma.menuItem.findFirst({
+      where: { isActive: true },
+    });
+
+    for (const rawItem of rawItems) {
+      const itemName = rawItem.title || rawItem.name || 'Special Item';
+      const qty = Number(rawItem.quantity || 1);
+      const unitPrice = Number(rawItem.price || 0);
+      const itemTotal = Number(rawItem.total || unitPrice * qty);
+
+      const matchedMenuItem = await this.prisma.menuItem.findFirst({
+        where: {
+          OR: [
+            { id: rawItem.merchant_id || rawItem.ref_id || undefined },
+            { name: { contains: itemName, mode: 'insensitive' } },
+          ],
+        },
+      });
+
+      const options = rawItem.options_to_add?.length
+        ? rawItem.options_to_add.map((o: any) => o.title || o.name).join(', ')
+        : '';
+      const notes = [rawItem.instructions, options].filter(Boolean).join(' | ');
+
+      orderItemsData.push({
+        itemId: matchedMenuItem?.id || fallbackMenuItem?.id || 'up-item',
+        name: itemName,
+        quantity: qty,
+        unitPrice,
+        total: itemTotal,
+        notes: notes || undefined,
+      });
+    }
+
+    const orderTotal = Number(payload?.order?.details?.order_total || payload?.order_total || 100);
+    const taxAmount = Number(payload?.order?.details?.tax || 0);
+    const discountAmount = Number(payload?.order?.details?.discount || 0);
+    const customerName = payload?.order?.customer?.name || `${channel} Customer`;
+    const customerPhone = payload?.order?.customer?.phone || '';
+    const instructions = payload?.order?.details?.instructions ? ` | Note: ${payload.order.details.instructions}` : '';
+
+    const sourceEnum =
+      channel === 'SWIGGY'
+        ? OrderSource.SWIGGY
+        : channel === 'EZCATER'
+          ? OrderSource.EZCATER
+          : OrderSource.ZOMATO;
+
+    const order = await this.prisma.order.create({
+      data: {
+        outletId: outlet.id,
+        type: OrderType.DELIVERY,
+        source: sourceEnum,
+        status: OrderStatus.ACCEPTED,
+        customerName,
+        customerPhone,
+        total: orderTotal,
+        subtotal: orderTotal - taxAmount,
+        taxAmount,
+        discount: discountAmount,
+        notes: `Online Order via ${channel} (UP-${orderId})${instructions}`,
+        items: {
+          create: orderItemsData.map((item) => ({
+            itemId: item.itemId,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total,
+            notes: item.notes,
+          })),
+        },
+      },
+      include: { items: true },
+    });
+
+    const posDevice = await this.prisma.posDevice.findFirst({
+      where: { outletId: outlet.id },
+    });
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    let billCount = await this.prisma.bill.count({
+      where: {
+        createdAt: { gte: startOfDay },
+        outletId: outlet.id,
+      },
+    });
+
+    const bill = await this.prisma.bill.create({
+      data: {
+        outletId: outlet.id,
+        posDeviceId: posDevice?.id || 'pos-default',
+        orderId: order.id,
+        billNumber: `BILL-${channel.slice(0, 2)}-${billCount + 1}`,
+        status: BillStatus.HELD,
+        customerName,
+        customerPhone,
+        notes: order.notes,
+        subtotal: orderTotal - taxAmount,
+        taxAmount,
+        discount: discountAmount,
+        total: orderTotal,
+        items: {
+          create: orderItemsData.map((item) => ({
+            itemId: item.itemId,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total,
+            notes: item.notes,
+          })),
+        },
+        businessDayId: await this.prisma.outletBusinessDay
+          .findFirst({
+            where: { outletId: outlet.id, status: BusinessDayStatus.OPEN },
+            orderBy: { startedAt: 'desc' },
+            select: { id: true },
+          })
+          .then((d) => d?.id ?? null),
+      },
+      include: this.billInclude(),
+    });
+
+    const kotCount = await this.prisma.kotTicket.count({
+      where: {
+        createdAt: { gte: startOfDay },
+        bill: { outletId: outlet.id },
+      },
+    });
+
+    const kot = await this.prisma.kotTicket.create({
+      data: {
+        billId: bill.id,
+        kotNumber: `KOT-${channel.slice(0, 2)}-${kotCount + 1}`,
+        notes: order.notes,
+        printedAt: new Date(),
+        items: {
+          create: bill.items.map((item) => ({
+            billItemId: item.id,
+            quantity: item.quantity,
+            notes: item.notes,
+          })),
+        },
+      },
+      include: {
+        items: { include: { billItem: true } },
+        bill: { include: { outlet: true, posDevice: true } },
+      },
+    });
+
+    void this.notificationsService.createNotification({
+      recipientRole: 'FRANCHISE_OWNER',
+      outletId: outlet.id,
+      title: `🛵 New ${channel} Order via UrbanPiper!`,
+      message: `Order #${order.id.slice(-6)} (${customerName}) for ₹${orderTotal} — KOT #${kot.kotNumber} generated for kitchen.`,
+      type: 'SUCCESS',
+    });
+
+    // Auto-acknowledge order to UrbanPiper Hub
+    void this.urbanpiperService.acknowledgeOrder(orderId, 15);
+
+    return {
+      status: 'success',
+      order_id: orderId,
+      orderId: order.id,
+      billId: bill.id,
+      kotNumber: kot.kotNumber,
+      message: `UrbanPiper order from ${channel} auto-accepted & routed to outlet ${outlet.name}`,
     };
   }
 
