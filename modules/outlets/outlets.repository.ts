@@ -126,6 +126,6 @@ export class OutletsRepository {
           users: true,
         },
       },
-    };
+    } as unknown as Prisma.OutletSelect;
   }
 }
